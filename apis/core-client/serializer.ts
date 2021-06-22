@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+import { BigNumber } from 'bignumber.js';
 import { isDuration, isValidUuid } from "./utils";
 import * as base64 from "./base64";
 import {
@@ -160,6 +161,22 @@ class SerializerImpl implements Serializer {
         payload = object;
       } else if (mapperType.match(/^(Number|String|Boolean|Object|Stream|Uuid)$/i) !== null) {
         payload = serializeBasicTypes(mapperType, objectName, object);
+      } else if (mapperType.match(/^StringUnixTime$/i) !== null) {
+        payload = serializeDateTypes('UnixTime', object, objectName).toString();
+      } else if (mapperType.match(/^BigNumber$/i) !== null) {
+        // if (typeof object !== 'number' && !BigNumber.isBigNumber(object)) {
+        //   throw new Error(`${objectName} with value ${object} must be of type number or BigNumber.`)
+        // }
+        // payload = new BigNumber(object).toFixed();
+        if (!BigNumber.isBigNumber(object)) {
+          throw new Error(`${objectName} with value ${object} must be a BigNumber.`)
+        }
+        payload = object.toFixed();
+      } else if (mapperType.match(/^StringNumber$/i) !== null) {
+        if (typeof object !== "number") {
+          throw new Error(`${objectName} with value ${object} must be of type number.`);
+        }
+        payload = object.toString();
       } else if (mapperType.match(/^Enum$/i) !== null) {
         const enumMapper = mapper as EnumMapper;
         payload = serializeEnumType(objectName, enumMapper.type.allowedValues, object);
@@ -289,6 +306,12 @@ class SerializerImpl implements Serializer {
         payload = new Date(responseBody);
       } else if (mapperType.match(/^UnixTime$/i) !== null) {
         payload = unixTimeToDate(responseBody);
+      } else if (mapperType.match(/^StringUnixTime$/i) !== null) {
+        payload = unixTimeToDate(+responseBody);
+      } else if (mapperType.match(/^BigNumber$/i) !== null) {
+        payload = new BigNumber(responseBody);
+      } else if (mapperType.match(/^StringNumber$/i) !== null) {
+        payload = +responseBody;
       } else if (mapperType.match(/^ByteArray$/i) !== null) {
         payload = base64.decodeString(responseBody);
       } else if (mapperType.match(/^Base64Url$/i) !== null) {

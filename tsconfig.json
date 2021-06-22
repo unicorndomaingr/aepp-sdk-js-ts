@@ -7,7 +7,7 @@
   },
   "compilerOptions": {
     "emitDeclarationOnly": true,
-    "isolatedModules": true,
+//    "isolatedModules": true,
     "outDir": "./es",
     "noImplicitAny": true,
     "module": "es6",

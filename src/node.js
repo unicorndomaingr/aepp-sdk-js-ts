@@ -23,7 +23,7 @@
  */
 
 import AsyncInit from './utils/async-init'
-import genSwaggerClient from './utils/swagger'
+import { NodeApi } from '../apis/node/'
 import semverSatisfies from './utils/semver-satisfies'
 import { MissingParamError, UnsupportedVersionError } from './utils/errors'
 
@@ -60,28 +60,23 @@ const Node = AsyncInit.compose({
     if (!url) throw new MissingParamError('"url" required')
     this.url = url.replace(/\/$/, '')
     this.internalUrl = internalUrl?.replace(/\/$/, '')
-    const client = await genSwaggerClient(`${this.url}/api?oas3`, {
-      internalUrl: this.internalUrl,
-      responseInterceptor: response => {
-        if (response.ok) return
-        return Object.assign(response, {
-          statusText: `${new URL(response.url).pathname.slice(1)} error: ` + response.body.reason
-        })
-      }
-    })
-    this.version = client.spec.info.version
+    this.api = new NodeApi(this.url, { allowInsecureConnection: true })
+    this.api.intAsString = true
+    const {
+      nodeRevision: revision,
+      nodeVersion: version,
+      genesisKeyBlockHash: genesisHash,
+      networkId: nodeNetworkId,
+      protocols,
+      topBlockHeight
+    } = await this.api.getStatus()
+    Object.assign(this, { revision, genesisHash, nodeNetworkId, version })
     if (
       !semverSatisfies(this.version, NODE_GE_VERSION, NODE_LT_VERSION) &&
       !ignoreVersion
     ) {
       throw new UnsupportedVersionError('node', this.version, NODE_GE_VERSION, NODE_LT_VERSION)
     }
-    this.api = client.api
-
-    const {
-      nodeRevision: revision, genesisKeyBlockHash: genesisHash, networkId,
-      protocols, topBlockHeight
-    } = await this.api.getStatus()
     this.consensusProtocolVersion = protocols
       .filter(({ effectiveAtHeight }) => topBlockHeight >= effectiveAtHeight)
       .reduce(
@@ -89,8 +84,6 @@ const Node = AsyncInit.compose({
         { effectiveAtHeight: -1, version: 0 }
       )
       .version
-    this.nodeNetworkId = networkId
-    return Object.assign(this, { revision, genesisHash })
   },
   methods: {
     getNodeInfo () {

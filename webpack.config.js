@@ -38,7 +38,12 @@ function configure (filename, opts = {}) {
             reportFilename: filename + '.html',
             openAnalyzer: false
           })]
-        : []
+        : [],
+      new BundleAnalyzerPlugin({
+        analyzerMode: 'static',
+        reportFilename: filename + '.html',
+        openAnalyzer: false
+      })
     ],
     output: {
       path: path.resolve(__dirname, 'dist'),
@@ -57,7 +62,7 @@ function configure (filename, opts = {}) {
 }
 
 module.exports = [
-  configure('aepp-sdk.js', { target: 'node' }),
+  // configure('aepp-sdk.js', { target: 'node' }),
   configure('aepp-sdk.browser.js'),
   configure('aepp-sdk.browser-script.js', { externals: undefined })
 ]

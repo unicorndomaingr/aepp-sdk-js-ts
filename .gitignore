@@ -26,3 +26,5 @@ coverage.*
 .history
 .site
 site
+/apis/node/
+/apis/node.json

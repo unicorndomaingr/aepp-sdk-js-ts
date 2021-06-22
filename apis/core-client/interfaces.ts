@@ -410,6 +410,9 @@ export interface SimpleMapperType {
     | "UnixTime"
     | "Uuid"
     | "Number"
+    | "StringUnixTime"
+    | "BigNumber"
+    | "StringNumber"
     | "any";
 }
 
