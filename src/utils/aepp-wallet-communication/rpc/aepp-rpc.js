@@ -18,7 +18,8 @@ import {
   UnsubscribedAccountError,
   UnAuthorizedAccountError,
   ArgumentError,
-  RpcConnectionError
+  RpcConnectionError,
+  NotImplementedError
 } from '../../errors'
 import Node from '../../../node'
 
@@ -125,6 +126,7 @@ export default Ae.compose({
   deepProps: { Ae: { defaults: { walletBroadcast: true } } },
   methods: {
     sign () {
+      throw new NotImplementedError('RAW signing using wallet')
     },
     addresses () {
       this._ensureAccountAccess()
