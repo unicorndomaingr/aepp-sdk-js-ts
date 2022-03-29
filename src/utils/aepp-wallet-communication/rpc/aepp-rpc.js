@@ -31,8 +31,7 @@ const NOTIFICATIONS = {
     },
   [METHODS.updateNetwork]: (instance) =>
     async ({ params }) => {
-      const { networkId, node } = params
-      instance.rpcClient.info.networkId = networkId
+      const { node } = params
       if (node) instance.addNode(node.name, await Node(node), true)
       instance.onNetworkChange(params)
     },
@@ -148,7 +147,6 @@ export default Ae.compose({
       if (this.rpcClient?.isConnected()) throw new AlreadyConnectedError('You are already connected to wallet ' + this.rpcClient)
       this.rpcClient = RpcClient({
         connection,
-        networkId: this.getNetworkId({ force: true }),
         ...connection.connectionInfo,
         id: uuid(),
         handlers: [handleMessage(this), this.onDisconnect]
@@ -219,7 +217,7 @@ export default Ae.compose({
       this._ensureAccountAccess(opt.onAccount)
       return this.rpcClient.request(
         METHODS.sign,
-        { ...opt, tx, returnSigned: true, networkId: this.getNetworkId() }
+        { ...opt, tx, returnSigned: true }
       )
     },
     /**
@@ -248,7 +246,6 @@ export default Ae.compose({
         METHODS.connect, {
           name: this.name,
           version: VERSION,
-          networkId: this.getNetworkId({ force: true }),
           connectNode
         }
       )
@@ -276,7 +273,7 @@ export default Ae.compose({
       }
       return this.rpcClient.request(
         METHODS.sign,
-        { onAccount: opt.onAccount, tx, returnSigned: false, networkId: this.getNetworkId() }
+        { onAccount: opt.onAccount, tx, returnSigned: false }
       )
     },
     _ensureConnected () {

@@ -118,10 +118,8 @@ async function verifyMessage (message, signature, opt = {}) {
  * @return {Object} Account instance
  */
 export default stampit({
-  init ({ networkId }) { // NETWORK_ID using for signing transaction's
-    if (!this.networkId && networkId) {
-      this.networkId = networkId
-    }
+  init ({ networkId }) {
+    this.networkId ??= networkId
   },
   methods: { signTransaction, getNetworkId, signMessage, verifyMessage }
 }, required({
