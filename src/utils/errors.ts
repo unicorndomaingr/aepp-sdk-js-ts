@@ -161,11 +161,10 @@ export class RequestTimedOutError extends BaseError {
 }
 
 export class TxTimedOutError extends BaseError {
-  constructor (blocks: number, th: string, status?: string) {
+  constructor (blocks: number, th: string) {
     super([
       `Giving up after ${blocks} blocks mined`,
-      `transaction hash: ${th}`,
-      ...status ? [`status: ${status}`] : []
+      `transaction hash: ${th}`
     ].join(', '))
     this.name = 'TxTimedOutError'
   }
