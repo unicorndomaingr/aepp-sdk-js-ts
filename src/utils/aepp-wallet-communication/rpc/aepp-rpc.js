@@ -9,6 +9,7 @@
  */
 import { v4 as uuid } from '@aeternity/uuid'
 import Ae from '../../../ae'
+import AsyncInit from '../../../utils/async-init'
 import RpcClient from './rpc-client'
 import { getHandler, message } from '../helpers'
 import { METHODS, RPC_STATUS, VERSION } from '../schema'
@@ -100,7 +101,7 @@ const handleMessage = (instance) => async (msg) => {
  * @param {Object} connection Wallet connection object
  * @return {Object}
  */
-export default Ae.compose({
+export default Ae.compose(AsyncInit, {
   async init ({
     name,
     connection,
