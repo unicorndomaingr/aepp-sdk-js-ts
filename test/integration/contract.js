@@ -129,9 +129,7 @@ describe('Contract', function () {
   })
 
   it('compiles Sophia code', async () => {
-    bytecode = (await aeSdk.compilerApi.compileContract({
-      code: identityContract, options: {}
-    })).bytecode
+    bytecode = (await aeSdk.compilerApi.compileContract({ code: identityContract })).bytecode
     expect(bytecode).to.satisfy(b => b.startsWith('cb_'))
   })
 
@@ -252,7 +250,7 @@ describe('Contract', function () {
     })
 
     it('Throw error when try to compile contract without providing external deps', async () => {
-      await expect(aeSdk.getContractInstance({ source: contractWithLib, options: {} }))
+      await expect(aeSdk.getContractInstance({ source: contractWithLib }))
         .to.be.rejectedWith('Couldn\'t find include file')
     })
 
@@ -277,9 +275,7 @@ describe('Contract', function () {
     let bytecode
 
     it('compile', async () => {
-      bytecode = (await aeSdk.compilerApi.compileContract({
-        code: identityContract, options: {}
-      })).bytecode
+      bytecode = (await aeSdk.compilerApi.compileContract({ code: identityContract })).bytecode
       expect(bytecode).to.be.a('string')
       expect(bytecode.split('_')[0]).to.be.equal('cb')
     })
@@ -290,8 +286,7 @@ describe('Contract', function () {
           'contract Foo =\n' +
           '  entrypoint getArg(x : bar) = x\n' +
           '  entrypoint getArg(x : int) = baz\n' +
-          '  entrypoint getArg1(x : int) = baz\n',
-        options: {}
+          '  entrypoint getArg1(x : int) = baz\n'
       })).to.be.rejectedWith(
         'compile error:\n' +
         'type_error:3:3: Duplicate definitions of getArg at\n' +
@@ -303,21 +298,20 @@ describe('Contract', function () {
     })
 
     it('generate contract ACI', async () => {
-      const aci = await aeSdk.compilerApi.generateACI({ code: identityContract, options: {} })
+      const aci = await aeSdk.compilerApi.generateACI({ code: identityContract })
       expect(aci).to.have.property('encodedAci')
       expect(aci).to.have.property('externalEncodedAci')
       expect(aci).to.have.property('interface')
     })
 
     it('throws clear exception if generating ACI with no arguments', async () => {
-      await expect(aeSdk.compilerApi.generateACI({ options: {} }))
+      await expect(aeSdk.compilerApi.generateACI({}))
         .to.be.rejectedWith('Error "body.code cannot be null or undefined." occurred in serializing the payload - undefined')
     })
 
     it('validate bytecode', async () => {
-      expect(await aeSdk.compilerApi.validateByteCode({
-        bytecode, source: identityContract, options: {}
-      })).to.be.eql({ body: {} })
+      expect(await aeSdk.compilerApi.validateByteCode({ bytecode, source: identityContract }))
+        .to.be.eql({ body: {} })
     })
 
     it('Use invalid compiler url', async () => {

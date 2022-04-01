@@ -254,9 +254,7 @@ describe('Contract instance', function () {
   }))
 
   it('rejects not matching bytecode with enabled validation', async () => expect(aeSdk.getContractInstance({
-    bytecode: (await aeSdk.compilerApi.compileContract({
-      code: identityContractSource, options: {}
-    })).bytecode,
+    bytecode: (await aeSdk.compilerApi.compileContract({ code: identityContractSource })).bytecode,
     aci: await aeSdk.compilerApi
       .generateACI({ code: identityContractSource, options: { fileSystem } }),
     contractAddress: testContractAddress,
