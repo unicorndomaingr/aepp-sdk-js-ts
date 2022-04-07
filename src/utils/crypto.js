@@ -23,11 +23,11 @@
 
 import nacl from 'tweetnacl'
 import aesjs from 'aes-js'
+import { encode as varuintEncode } from 'varuint-bitcoin'
 
 import { str2buf } from './bytes'
 import { encode, decode, sha256hash } from './encoder'
 import { hash } from './crypto-ts'
-import { NotImplementedError } from './errors'
 
 export * from './crypto-ts'
 export { sha256hash }
@@ -191,8 +191,7 @@ export function verify (str, signature, publicKey) {
 export function messageToHash (message) {
   const p = Buffer.from('aeternity Signed Message:\n', 'utf8')
   const msg = Buffer.from(message, 'utf8')
-  if (msg.length >= 0xFD) throw new NotImplementedError('Message too long')
-  return hash(Buffer.concat([Buffer.from([p.length]), p, Buffer.from([msg.length]), msg]))
+  return hash(Buffer.concat([varuintEncode(p.length), p, varuintEncode(msg.length), msg]))
 }
 
 export function signMessage (message, privateKey) {
