@@ -21,14 +21,16 @@
  * @export AccountMultiple
  */
 
+// @ts-ignore TODO: remove me
 import AsyncInit from '../utils/async-init'
 import MemoryAccount from './memory'
+// @ts-ignore TODO: remove me
 import { decode } from '../tx/builder/helpers'
 import AccountBase, { isAccountBase } from './base'
-import {
-  UnavailableAccountError,
-  TypeError
-} from '../utils/errors'
+import { AccountBase as IAccountBase } from './base.types'
+import { UnavailableAccountError, TypeError } from '../utils/errors'
+import { Multiple } from './multiple.types'
+import stampit from '@stamp/it'
 
 /**
  * AccountMultiple stamp
@@ -53,11 +55,17 @@ import {
  * accounts.selectAccount(address) // Select account
  * accounts.addresses() // Get available accounts
  */
-export default AccountBase.compose(AsyncInit, {
-  async init ({ accounts = [], address }) {
-    this.accounts = Object.fromEntries(await Promise.all(
-      accounts.map(async a => [await a.address(), a])
-    ))
+export default AccountBase.compose<Multiple>(AsyncInit, {
+  async init (this:Multiple, {
+    accounts = [],
+    address
+  }: {
+    accounts: Multiple['accounts'];
+    address?: string;
+  }) {
+    this.accounts = Object.fromEntries(
+      await Promise.all(accounts.map(async (a) => [await a.address(), a]))
+    )
     address = address || Object.keys(this.accounts)[0]
     if (address) this.selectAccount(address)
   },
@@ -68,95 +76,69 @@ export default AccountBase.compose(AsyncInit, {
     selectedAddress: null
   },
   methods: {
-    async address ({ onAccount = this.selectedAddress } = {}) {
-      return this._resolveAccount(onAccount).address()
+    async address (this: Multiple, { onAccount = this.selectedAddress } = {}) {
+      if (onAccount) { return this._resolveAccount(onAccount).address() }
     },
-    async sign (data, { onAccount = this.selectedAddress } = {}) {
-      return this._resolveAccount(onAccount).sign(data)
+    async sign (
+      this: Multiple,
+      data,
+      { onAccount = this.selectedAddress } = {}
+    ) {
+      if (onAccount) return this._resolveAccount(onAccount).sign(data)
     },
-    /**
-     * Get accounts addresses
-     * @alias module:@aeternity/aepp-sdk/es/accounts/multiple
-     * @function
-     * @rtype () => String[]
-     * @return {String[]}
-     * @example addresses()
-     */
-    addresses () {
+    addresses (this:Multiple) {
       return Object.keys(this.accounts)
     },
-    /**
-     * Add specific account
-     * @alias module:@aeternity/aepp-sdk/es/accounts/multiple
-     * @function
-     * @category async
-     * @rtype (account: Account, { select: Boolean }) => void
-     * @param {Object} account - Account instance
-     * @param {Object} [options={}] - Options
-     * @param {Boolean} [options.select] - Select account
-     * @return {void}
-     * @example addAccount(account)
-     */
-    async addAccount (account, { select } = {}) {
-      const address = await account.address()
-      this.accounts[address] = account
+    async addAccount (this:Multiple, account, { select }: { select?: boolean } = {}) {
+      const address = await account.address();
+      (this.accounts[address as keyof Multiple['accounts']] as IAccountBase) = account
       if (select) this.selectAccount(address)
     },
-    /**
-     * Remove specific account
-     * @alias module:@aeternity/aepp-sdk/es/accounts/multiple
-     * @function
-     * @rtype (address: String) => void
-     * @param {String} address - Address of account to remove
-     * @return {void}
-     * @example removeAccount(address)
-     */
-    removeAccount (address) {
-      if (!this.accounts[address]) {
+    removeAccount (this:Multiple, address) {
+      if (!this.accounts[address as keyof Multiple['accounts']]) {
         console.warn(`removeAccount: Account for ${address} not available`)
         return
       }
-      delete this.accounts[address]
-      if (this.selectedAddress === address) this.selectedAddress = null
+      delete this.accounts[address as keyof Multiple['accounts']]
+      if (this.selectedAddress === address) delete this.selectedAddress
     },
-    /**
-     * Select specific account
-     * @alias module:@aeternity/aepp-sdk/es/account/selector
-     * @instance
-     * @rtype (address: String) => void
-     * @param {String} address - Address of account to select
-     * @example selectAccount('ak_xxxxxxxx')
-     */
-    selectAccount (address) {
+    selectAccount (this:Multiple, address) {
       decode(address, 'ak')
-      if (!this.accounts[address]) throw new UnavailableAccountError(address)
+      if (!this.accounts[address as keyof Multiple['accounts']]) throw new UnavailableAccountError(address)
       this.selectedAddress = address
     },
-    /**
-     * Resolves an account
-     * @param account account address (should exist in sdk instance), MemoryAccount or keypair
-     * @returns {AccountBase}
-     * @private
-     */
-    _resolveAccount (account) {
+    _resolveAccount (this: Multiple, account) {
       if (account === null) {
         throw new TypeError(
           'Account should be an address (ak-prefixed string), ' +
-          'keypair, or instance of account base, got null instead')
+            'keypair, or instance of account base, got null instead'
+        )
       } else {
         switch (typeof account) {
           case 'string':
             decode(account, 'ak')
-            if (!this.accounts[account]) throw new UnavailableAccountError(account)
-            return this.accounts[account]
+            if (!this.accounts[account as keyof Multiple['accounts']]) { throw new UnavailableAccountError(account) }
+            return this.accounts[account as keyof Multiple['accounts']]
           case 'object':
-            return isAccountBase(account) ? account : MemoryAccount({ keypair: account })
+            return isAccountBase(account)
+              ? account
+              : MemoryAccount({ keypair: account })
           default:
             throw new TypeError(
               'Account should be an address (ak-prefixed string), ' +
-              `keypair, or instance of account base, got ${account} instead`)
+                `keypair, or instance of account base, got ${account} instead`
+            )
         }
       }
     }
-  }
-})
+  } as Pick<
+    Multiple,
+    | 'address'
+    | 'sign'
+    | 'addresses'
+    | 'addAccount'
+    | 'removeAccount'
+    | 'selectAccount'
+    | '_resolveAccount'
+  >
+}) as stampit.Stamp<Multiple>
