@@ -23,10 +23,14 @@
  */
 
 import AccountBase from './base'
+// @ts-ignore TODO: remove me
 import { sign, isValidKeypair } from '../utils/crypto'
 import { isHex } from '../utils/string'
+// @ts-ignore TODO: remove me
 import { decode } from '../tx/builder/helpers'
 import { InvalidKeypairError } from '../utils/errors'
+import { Memory } from './memory.types'
+import stampit from '@stamp/it'
 
 const secrets = new WeakMap()
 
@@ -42,7 +46,7 @@ const secrets = new WeakMap()
  * @return {Account}
  */
 export default AccountBase.compose({
-  init ({ keypair, gaId }) {
+  init (this:Memory, { keypair, gaId }: Memory['options']) {
     this.isGa = !!gaId
     if (gaId) {
       decode(gaId)
@@ -72,12 +76,12 @@ export default AccountBase.compose({
   },
   props: { isGa: false },
   methods: {
-    sign (data) {
+    sign (this:Memory, data) {
       if (this.isGa) throw new InvalidKeypairError('You are trying to sign data using generalized account without keypair')
       return Promise.resolve(sign(data, secrets.get(this).secretKey))
     },
-    address () {
+    address (this:Memory) {
       return Promise.resolve(secrets.get(this).publicKey)
     }
-  }
-})
+  } as Omit<Memory, 'isGa'|'options'>
+}) as stampit.Stamp<Memory>
