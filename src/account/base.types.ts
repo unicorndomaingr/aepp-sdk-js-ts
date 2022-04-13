@@ -1,3 +1,10 @@
+/**
+  * AccountBase
+  *
+  * Account is one of the three basic building blocks of an
+  * {@link module:@aeternity/aepp-sdk/es/ae--Ae} client and provides access to a
+  * signing key pair.
+  */
 export interface AccountBase {
     networkId: string
     readonly signTransaction: (tx: string, opt?: { innerTx?: boolean }) => Promise<string>
@@ -11,7 +18,8 @@ export interface AccountBase {
      */
     readonly getNetworkId: (opt?: { networkId?: string, force?: boolean }) => string
     readonly signMessage: (message: string, opt?: { returnHex?: boolean }) => Promise<string>
-    readonly verifyMessage: (message: string, signature: string, opt?: { onAccount?: object }) => Promise<boolean>
+    readonly verifyMessage: (message: string, signature: string,
+        opt?: { onAccount?: object }) => Promise<boolean>
 
     /**
      * Sign data blob
@@ -23,7 +31,7 @@ export interface AccountBase {
      * @param {String} data - Data blob to sign
      * @return {String} Signed data blob
      */
-    readonly sign: (data: string | Buffer, opt?: any) => Promise<string>
+    readonly sign: (data: string | Buffer, opt?: any) => Promise<Buffer|Uint8Array|String>
 
     /**
      * Obtain account address
