@@ -1,3 +1,4 @@
+import { Pointer } from './helpers'
 /**
  * Transaction Schema for TxBuilder
  * @module @aeternity/aepp-sdk/es/tx/builder/schema
@@ -7,7 +8,9 @@
 // # https://github.com/aeternity/protocol/blob/master/serializations.md#binary-serialization
 
 import BigNumber from 'bignumber.js'
-import { Name, NameId, NameFee, Deposit } from './field-types'
+import { Name, NameId, NameFee, Deposit, Field } from './field-types'
+import MPTree from '../../utils/mptree'
+import { EncodedData, EncodingType } from '../../utils/encoder'
 
 export * from './constants'
 export const VSN = 1
@@ -77,8 +80,23 @@ const OBJECT_TAG_GA_META = 81
 const OBJECT_TAG_PAYING_FOR = 82
 const OBJECT_TAG_SOPHIA_BYTE_CODE = 70
 
-const TX_FIELD = (name, type, prefix) => [name, type, prefix]
-const TX_SCHEMA_FIELD = (schema, objectId) => [schema, objectId]
+export type TxField = [name: string, type: string | typeof Field, prefix: string | string[]]
+const TX_FIELD: (
+  name: string,
+  type: string | typeof Field,
+  prefix?: string | string[]
+) => TxField = (name, type, prefix = '') => [name, type, prefix]
+
+type TxSchemaField = (
+  schema: TxField[],
+  objectId: number
+) => [TxField[], number]
+const TX_SCHEMA_FIELD: TxSchemaField = (schema, objectId) => [schema, objectId]
+
+export type OnAccount = string | {
+  publicKey: EncodedData<'ak'>
+  secretKey: string
+}
 
 /**
  * @constant
@@ -197,7 +215,9 @@ export const PROTOCOL_VM_ABI = {
   }
 }
 
-export const OBJECT_ID_TX_TYPE = {
+export const OBJECT_ID_TX_TYPE: {
+  [key: string]: string
+} = {
   [OBJECT_TAG_ACCOUNT]: TX_TYPE.account,
   [OBJECT_TAG_SIGNED_TRANSACTION]: TX_TYPE.signed,
   [OBJECT_TAG_SPEND_TRANSACTION]: TX_TYPE.spend,
@@ -283,8 +303,14 @@ export const GAS_PER_BYTE = 20
 export const DEFAULT_FEE = 20000
 export const KEY_BLOCK_INTERVAL = 3
 
-// MAP WITH FEE CALCULATION https://github.com/aeternity/protocol/blob/master/consensus/consensus.md#gas
-export const TX_FEE_BASE_GAS = (txType) => {
+/**
+ * Calculate the Base fee gas
+ * @see {@link https://github.com/aeternity/protocol/blob/master/consensus/README.md#gas}
+ * @param {string} txType - The transaction type
+ * @returns {BigNumber} The base fee
+ * @example TX_FEE_BASE('channelForceProgress') => new BigNumber(30 * 15000)
+ */
+export const TX_FEE_BASE_GAS = (txType: string): BigNumber => {
   const factor = ({
     [TX_TYPE.channelForceProgress]: 30,
     [TX_TYPE.channelOffChain]: 0,
@@ -298,11 +324,26 @@ export const TX_FEE_BASE_GAS = (txType) => {
     [TX_TYPE.gaAttach]: 5,
     [TX_TYPE.gaMeta]: 5,
     [TX_TYPE.payingFor]: 1 / 5
-  })[txType] || 1
+  })[txType] ?? 1
   return new BigNumber(factor * BASE_GAS)
 }
 
-export const TX_FEE_OTHER_GAS = (txType, txSize, { relativeTtl, innerTxSize }) => {
+/**
+ * Calculate fee for Other types of transactions
+ * @see {@link https://github.com/aeternity/protocol/blob/master/consensus/README.md#gas}
+ * @param {String} txType - The transaction type
+ * @param {Number} txSize - The transaction size
+ * @returns {Object} parameters - The transaction parameters
+ * @returns {Number} parameters.relativeTtl - The relative ttl
+ * @returns {Number} parameters.innerTxSize - The size of the inner transaction
+ * @returns {BigNumber} The Other fee
+ * @example TX_FEE_OTHER_GAS('oracleResponse',10, {relativeTtl:10, innerTxSize:10 })
+ *  => new BigNumber(10).times(20).plus(Math.ceil(32000 * 10 / Math.floor(60 * 24 * 365 / 2)))
+ */
+export const TX_FEE_OTHER_GAS = (txType: string, txSize: number, { relativeTtl, innerTxSize }: {
+  relativeTtl: number
+  innerTxSize: number
+}): BigNumber => {
   switch (txType) {
     case TX_TYPE.oracleRegister:
     case TX_TYPE.oracleExtend:
@@ -321,6 +362,14 @@ export const TX_FEE_OTHER_GAS = (txType, txSize, { relativeTtl, innerTxSize }) =
   }
 }
 
+export interface TxBase {
+  tag?: number
+  vsn?: number
+  gasLimit?: number
+  fee?: BigNumber | number | string
+  ttl?: BigNumber | number | string
+  nonce?: number | BigNumber | string
+}
 const BASE_TX = [
   TX_FIELD('tag', FIELD_TYPES.int),
   TX_FIELD('VSN', FIELD_TYPES.int)
@@ -335,6 +384,13 @@ export const CONTRACT_BYTE_CODE_LIMA = [
   TX_FIELD('payable', FIELD_TYPES.bool)
 ]
 
+interface TxAccount extends TxBase {
+  flags: number
+  balance: number
+  gaContract: string
+  gaAuthFun: Function
+  nonce: number
+}
 const ACCOUNT_TX_2 = [
   ...BASE_TX,
   TX_FIELD('flags', FIELD_TYPES.int),
@@ -344,6 +400,14 @@ const ACCOUNT_TX_2 = [
   TX_FIELD('gaAuthFun', FIELD_TYPES.binary, 'cb')
 ]
 
+export interface TxSpend extends TxBase{
+  senderId?: string | Buffer
+  recipientId: string | Buffer
+  amount: number | string | BigNumber
+  payload?: string
+  denomination?: string
+  absoluteTtl?: boolean
+}
 const SPEND_TX = [
   ...BASE_TX,
   TX_FIELD('senderId', FIELD_TYPES.id, 'ak'),
@@ -355,11 +419,21 @@ const SPEND_TX = [
   TX_FIELD('payload', FIELD_TYPES.payload)
 ]
 
+interface TxSigned extends TxBase {
+  signatures: string[]
+  rlpBinary: Buffer
+}
 const SIGNED_TX = [
   ...BASE_TX,
   TX_FIELD('signatures', FIELD_TYPES.signatures),
   TX_FIELD('encodedTx', FIELD_TYPES.rlpBinary)
 ]
+
+interface TxNamePreClaim extends TxBase {
+  accountId: string
+  nonce: number
+  commitmentId: string
+}
 
 const NAME_PRE_CLAIM_TX = [
   ...BASE_TX,
@@ -370,6 +444,13 @@ const NAME_PRE_CLAIM_TX = [
   TX_FIELD('ttl', FIELD_TYPES.int)
 ]
 
+export interface TxNameClaim2 extends TxBase {
+  id?: string
+  accountId?: string
+  name?: string
+  nameFee?: number | BigNumber | string
+  nameSalt?: number
+}
 const NAME_CLAIM_TX_2 = [
   ...BASE_TX,
   TX_FIELD('accountId', FIELD_TYPES.id, 'ak'),
@@ -381,6 +462,17 @@ const NAME_CLAIM_TX_2 = [
   TX_FIELD('ttl', FIELD_TYPES.int)
 ]
 
+export interface TxNameUpdate extends TxBase {
+  accountId?: string
+  name?: string
+  nameId?: string
+  pointers?: Pointer[]
+  clientTtl?: number | string | BigNumber
+  nameTtl?: number | string | BigNumber
+  extendPointers?: boolean
+  onAccount?: OnAccount
+  blocks?: number
+}
 const NAME_UPDATE_TX = [
   ...BASE_TX,
   TX_FIELD('accountId', FIELD_TYPES.id, 'ak'),
@@ -393,6 +485,12 @@ const NAME_UPDATE_TX = [
   TX_FIELD('ttl', FIELD_TYPES.int)
 ]
 
+interface TxNameTransfer extends TxBase {
+  accountId: string
+  nonce: number
+  nameId: string
+  recipientId: string
+}
 const NAME_TRANSFER_TX = [
   ...BASE_TX,
   TX_FIELD('accountId', FIELD_TYPES.id, 'ak'),
@@ -403,6 +501,10 @@ const NAME_TRANSFER_TX = [
   TX_FIELD('ttl', FIELD_TYPES.int)
 ]
 
+export interface TxNameRevoke extends TxBase {
+  accountId?: string
+  nameId?: string
+}
 const NAME_REVOKE_TX = [
   ...BASE_TX,
   TX_FIELD('accountId', FIELD_TYPES.id, 'ak'),
@@ -412,6 +514,15 @@ const NAME_REVOKE_TX = [
   TX_FIELD('ttl', FIELD_TYPES.int)
 ]
 
+interface TxContract extends TxBase {
+  owner: string
+  ctVersion?: number
+  code: string
+  log: string
+  active: boolean
+  referers: string[]
+  deposit?: number
+}
 const CONTRACT_TX = [
   ...BASE_TX,
   TX_FIELD('owner', FIELD_TYPES.id, 'ak'),
@@ -423,6 +534,15 @@ const CONTRACT_TX = [
   TX_FIELD('deposit', Deposit)
 ]
 
+interface TxGaAttach extends TxBase {
+  ownerId: string
+  code: string
+  authFun: Function
+  ctVersion?: number
+  gasLimit: number
+  gasPrice: number
+  callData: string
+}
 const GA_ATTACH_TX = [
   ...BASE_TX,
   TX_FIELD('ownerId', FIELD_TYPES.id, 'ak'),
@@ -437,6 +557,15 @@ const GA_ATTACH_TX = [
   TX_FIELD('callData', FIELD_TYPES.binary, 'cb')
 ]
 
+interface TxGaMeta2 extends TxBase {
+  gaId: string
+  authData: string
+  abiVersion: number
+  fee: number
+  gasLimit: number
+  gasPrice: number
+  tx: Buffer
+}
 const GA_META_TX_2 = [
   ...BASE_TX,
   TX_FIELD('gaId', FIELD_TYPES.id, 'ak'),
@@ -448,6 +577,11 @@ const GA_META_TX_2 = [
   TX_FIELD('tx', FIELD_TYPES.rlpBinary)
 ]
 
+interface TxPayingFor extends TxBase {
+  payerId: string
+  fee: BigNumber
+  tx: Buffer
+}
 const PAYING_FOR_TX = [
   ...BASE_TX,
   TX_FIELD('payerId', FIELD_TYPES.id, 'ak'),
@@ -456,6 +590,17 @@ const PAYING_FOR_TX = [
   TX_FIELD('tx', FIELD_TYPES.rlpBinary)
 ]
 
+interface TxContractCreate extends TxBase {
+  ownerId: string
+  code: string
+  ctVersion?: number
+  deposit?: number
+  amount: number
+  gasLimit: number
+  gasPrice: number
+  callData: string
+  contractId?: string
+}
 const CONTRACT_CREATE_TX = [
   ...BASE_TX,
   TX_FIELD('ownerId', FIELD_TYPES.id, 'ak'),
@@ -471,6 +616,15 @@ const CONTRACT_CREATE_TX = [
   TX_FIELD('callData', FIELD_TYPES.binary, 'cb')
 ]
 
+interface TxContractCall extends TxBase {
+  callerId: string
+  contractId: string
+  abiVersion?: number
+  amount: number
+  gasLimit: number
+  gasPrice: number
+  callData: string
+}
 const CONTRACT_CALL_TX = [
   ...BASE_TX,
   TX_FIELD('callerId', FIELD_TYPES.id, 'ak'),
@@ -485,6 +639,17 @@ const CONTRACT_CALL_TX = [
   TX_FIELD('callData', FIELD_TYPES.binary, 'cb')
 ]
 
+interface TxContractCallResult extends TxBase {
+  callerId: string
+  callerNonce: number
+  height: number
+  contractId: string
+  gasPrice: number
+  gasUsed: number
+  returnValue: string
+  returnType: string
+  log: string
+}
 const CONTRACT_CALL_RESULT_TX = [
   ...BASE_TX,
   TX_FIELD('callerId', FIELD_TYPES.id, 'ak'),
@@ -500,6 +665,15 @@ const CONTRACT_CALL_RESULT_TX = [
   TX_FIELD('log', FIELD_TYPES.rawBinary)
 ]
 
+export interface TxOracleRegister extends TxBase {
+  accountId?: string
+  nonce?: number
+  queryFormat?: string
+  responseFormat?: string
+  queryFee?: number
+  oracleTtl?: { type: string, value: number}
+  abiVersion?: number
+}
 const ORACLE_REGISTER_TX = [
   ...BASE_TX,
   TX_FIELD('accountId', FIELD_TYPES.id, 'ak'),
@@ -514,6 +688,11 @@ const ORACLE_REGISTER_TX = [
   TX_FIELD('abiVersion', FIELD_TYPES.int)
 ]
 
+interface TxOracleExtend extends TxBase {
+  oracleId: string
+  callerId?: string
+  oracleTtl?: { type: string, value: number}
+}
 const ORACLE_EXTEND_TX = [
   ...BASE_TX,
   TX_FIELD('oracleId', FIELD_TYPES.id, ['ok', 'nm']),
@@ -524,6 +703,14 @@ const ORACLE_EXTEND_TX = [
   TX_FIELD('ttl', FIELD_TYPES.int)
 ]
 
+interface TxOracleQuery extends TxBase {
+  senderId: string
+  oracleId: string
+  query: string
+  queryFee: number
+  responseTtl?: { type: string, value: number}
+  queryTtl?: { type: string, value: number}
+}
 const ORACLE_QUERY_TX = [
   ...BASE_TX,
   TX_FIELD('senderId', FIELD_TYPES.id, 'ak'),
@@ -538,6 +725,16 @@ const ORACLE_QUERY_TX = [
   TX_FIELD('fee', FIELD_TYPES.int),
   TX_FIELD('ttl', FIELD_TYPES.int)
 ]
+
+interface TxOracleRespond extends TxBase {
+  oracleId: string
+
+  response: string
+
+  responseTtl?: { type: string, value: number}
+  queryId: string
+  callerId?: string
+}
 const ORACLE_RESPOND_TX = [
   ...BASE_TX,
   TX_FIELD('oracleId', FIELD_TYPES.id, 'ok'),
@@ -550,6 +747,18 @@ const ORACLE_RESPOND_TX = [
   TX_FIELD('ttl', FIELD_TYPES.int)
 ]
 
+interface TxChannelCreate2 extends TxBase {
+  initiator: string
+  initiatorAmount: number
+  responder: string
+  responderAmount: number
+  channelReserve: string
+  lockPeriod: number
+  initiatorDelegateIds: string
+  responderDelegateIds: string
+  stateHash: string
+
+}
 const CHANNEL_CREATE_TX_2 = [
   ...BASE_TX,
   TX_FIELD('initiator', FIELD_TYPES.id, 'ak'),
@@ -566,6 +775,14 @@ const CHANNEL_CREATE_TX_2 = [
   TX_FIELD('nonce', FIELD_TYPES.int)
 ]
 
+interface TxChannelClose extends TxBase {
+  channelId: string
+  fromId: string
+  amount: number
+  stateHash: string
+  round: number
+
+}
 const CHANNEL_DEPOSIT_TX = [
   ...BASE_TX,
   TX_FIELD('channelId', FIELD_TYPES.id, 'ch'),
@@ -578,6 +795,14 @@ const CHANNEL_DEPOSIT_TX = [
   TX_FIELD('nonce', FIELD_TYPES.int)
 ]
 
+interface TxChannelWithdraw extends TxBase {
+  channelId: string
+  toId: string
+  amount: number
+  stateHash: string
+  round: number
+
+}
 const CHANNEL_WITHDRAW_TX = [
   ...BASE_TX,
   TX_FIELD('channelId', FIELD_TYPES.id, 'ch'),
@@ -590,6 +815,15 @@ const CHANNEL_WITHDRAW_TX = [
   TX_FIELD('nonce', FIELD_TYPES.int)
 ]
 
+interface TxChannelCloseMutual extends TxBase {
+  channelId: string
+  fromId: string
+  initiatorAmountFinal: number
+  responderAmountFinal: number
+  ttl: number
+  fee: number
+  nonce: string
+}
 const CHANNEL_CLOSE_MUTUAL_TX = [
   ...BASE_TX,
   TX_FIELD('channelId', FIELD_TYPES.id, 'ch'),
@@ -601,6 +835,13 @@ const CHANNEL_CLOSE_MUTUAL_TX = [
   TX_FIELD('nonce', FIELD_TYPES.int)
 ]
 
+interface TxChannelCloseSolo extends TxBase {
+  channelId: string
+  fromId: string
+  payload: string
+
+  poi: string
+}
 const CHANNEL_CLOSE_SOLO_TX = [
   ...BASE_TX,
   TX_FIELD('channelId', FIELD_TYPES.id, 'ch'),
@@ -612,6 +853,13 @@ const CHANNEL_CLOSE_SOLO_TX = [
   TX_FIELD('nonce', FIELD_TYPES.int)
 ]
 
+interface TxChannelSlash extends TxBase {
+  channelId: string
+  fromId: string
+  payload: string
+
+  poi: string
+}
 const CHANNEL_SLASH_TX = [
   ...BASE_TX,
   TX_FIELD('channelId', FIELD_TYPES.id, 'ch'),
@@ -623,6 +871,12 @@ const CHANNEL_SLASH_TX = [
   TX_FIELD('nonce', FIELD_TYPES.int)
 ]
 
+interface TxChannelSettle extends TxBase {
+  channelId: string
+  fromId: string
+  initiatorAmountFinal: number
+  responderAmountFinal: number
+}
 const CHANNEL_SETTLE_TX = [
   ...BASE_TX,
   TX_FIELD('channelId', FIELD_TYPES.id, 'ch'),
@@ -634,6 +888,18 @@ const CHANNEL_SETTLE_TX = [
   TX_FIELD('nonce', FIELD_TYPES.int)
 ]
 
+interface TxChannelForceProgress extends TxBase {
+  channelId: string
+  fromId: string
+  payload: string
+  round: number
+  update: string
+  stateHash: string
+  offChainTrees: string //! Test
+  ttl: number
+  fee: number
+  nonce: number
+}
 const CHANNEL_FORCE_PROGRESS_TX = [
   ...BASE_TX,
   TX_FIELD('channelId', FIELD_TYPES.id, 'ch'),
@@ -648,6 +914,11 @@ const CHANNEL_FORCE_PROGRESS_TX = [
   TX_FIELD('nonce', FIELD_TYPES.int)
 ]
 
+interface TxChannelOffchain2 extends TxBase {
+  channelId: string
+  round: number
+  stateHash: string
+}
 const CHANNEL_OFFCHAIN_TX_2 = [
   ...BASE_TX,
   TX_FIELD('channelId', FIELD_TYPES.id, 'ch'),
@@ -655,6 +926,23 @@ const CHANNEL_OFFCHAIN_TX_2 = [
   TX_FIELD('stateHash', FIELD_TYPES.binary, 'st')
 ]
 
+interface TxChannel3 extends TxBase {
+  initiator: string
+  responder: string
+  channelAmount: number
+  initiatorAmount: number
+  responderAmount: number
+  channelReserve: number
+  initiatorDelegateIds: string[]
+  responderDelegateIds: string[]
+  stateHash: string
+  round: number
+  soloRound: number
+  lockperiod: number
+  lockedUntil: number
+  initiatorAuth: string
+  responderAuth: string
+}
 const CHANNEL_TX_3 = [
   ...BASE_TX,
   TX_FIELD('initiator', FIELD_TYPES.id, 'ak'),
@@ -674,6 +962,11 @@ const CHANNEL_TX_3 = [
   TX_FIELD('responderAuth', FIELD_TYPES.binary, 'cb')
 ]
 
+interface TxChannelSnapshotSolo extends TxBase {
+  channelId: string
+  fromId: string
+  payload: string
+}
 const CHANNEL_SNAPSHOT_SOLO_TX = [
   ...BASE_TX,
   TX_FIELD('channelId', FIELD_TYPES.id, 'ch'),
@@ -684,6 +977,13 @@ const CHANNEL_SNAPSHOT_SOLO_TX = [
   TX_FIELD('nonce', FIELD_TYPES.int)
 ]
 
+interface TxChannelOffchainCreateContract extends TxBase {
+  owner: string
+  ctVersion?: number
+  code: string
+  deposit?: number
+  callData: string
+}
 const CHANNEL_OFFCHAIN_CREATE_CONTRACT_TX = [
   ...BASE_TX,
   TX_FIELD('owner', FIELD_TYPES.id, 'ak'),
@@ -693,6 +993,16 @@ const CHANNEL_OFFCHAIN_CREATE_CONTRACT_TX = [
   TX_FIELD('callData', FIELD_TYPES.binary, 'cb')
 ]
 
+interface TxChannelOffchainCallContract extends TxBase {
+  caller: string
+  contract: string
+  abiVersion?: number
+  amount: number
+  callData: string
+  callStack: string
+  gasPrice: number
+  gasLimit: number
+}
 const CHANNEL_OFFCHAIN_CALL_CONTRACT_TX = [
   ...BASE_TX,
   TX_FIELD('caller', FIELD_TYPES.id, 'ak'),
@@ -705,6 +1015,12 @@ const CHANNEL_OFFCHAIN_CALL_CONTRACT_TX = [
   TX_FIELD('gasLimit', FIELD_TYPES.int)
 ]
 
+interface TxChannelReconnect extends TxBase {
+  channelId: string
+  round: number
+  role: string
+  pubkey: string
+}
 const CHANNEL_RECONNECT_TX = [
   ...BASE_TX,
   TX_FIELD('channelId', FIELD_TYPES.id, 'ch'),
@@ -713,6 +1029,11 @@ const CHANNEL_RECONNECT_TX = [
   TX_FIELD('pubkey', FIELD_TYPES.id, 'ak')
 ]
 
+interface TxChannelOffchainUpdateTransfer extends TxBase {
+  from: string
+  to: string
+  amount: number
+}
 const CHANNEL_OFFCHAIN_UPDATE_TRANSFER_TX = [
   ...BASE_TX,
   TX_FIELD('from', FIELD_TYPES.id, 'ak'),
@@ -720,18 +1041,34 @@ const CHANNEL_OFFCHAIN_UPDATE_TRANSFER_TX = [
   TX_FIELD('amount', FIELD_TYPES.int)
 ]
 
+interface TxChannelOffchainUpdateDeposit extends TxBase {
+  from: string
+  amount: number
+}
 const CHANNEL_OFFCHAIN_UPDATE_DEPOSIT_TX = [
   ...BASE_TX,
   TX_FIELD('from', FIELD_TYPES.id, 'ak'),
   TX_FIELD('amount', FIELD_TYPES.int)
 ]
 
+interface TxChannelOffchainUpdateWithdrawal extends TxBase {
+  from: string
+  amount: number
+}
 const CHANNEL_OFFCHAIN_UPDATE_WITHDRAWAL_TX = [
   ...BASE_TX,
   TX_FIELD('from', FIELD_TYPES.id, 'ak'),
   TX_FIELD('amount', FIELD_TYPES.int)
 ]
 
+interface TxProofOfInclusion extends TxBase {
+  accounts: MPTree[]
+  calls: MPTree[]
+  contracts: MPTree[]
+  channels: MPTree[]
+  ns: MPTree[]
+  oracles: MPTree[]
+}
 const PROOF_OF_INCLUSION_TX = [
   ...BASE_TX,
   TX_FIELD('accounts', FIELD_TYPES.mptrees),
@@ -742,6 +1079,14 @@ const PROOF_OF_INCLUSION_TX = [
   TX_FIELD('oracles', FIELD_TYPES.mptrees)
 ]
 
+interface TxStateTrees{
+  contracts: MPTree[]
+  calls: MPTree[]
+  channels: MPTree[]
+  accounts: MPTree[]
+  ns: MPTree[]
+  oracles: MPTree[]
+}
 const STATE_TREES_TX = [
   ...BASE_TX,
   TX_FIELD('contracts', FIELD_TYPES.rlpBinary),
@@ -752,48 +1097,92 @@ const STATE_TREES_TX = [
   TX_FIELD('accounts', FIELD_TYPES.rlpBinary)
 ]
 
+interface TxMerklePatriciaTree extends TxBase{
+  values: Buffer[]
+}
 const MERKLE_PATRICIA_TREE_TX = [
   ...BASE_TX,
   TX_FIELD('values', FIELD_TYPES.rlpBinaries)
 ]
 
+interface TxMerklePatriciaTreeValue extends TxBase{
+  key: string
+  value: string
+}
 const MERKLE_PATRICIA_TREE_VALUE_TX = [
   ...BASE_TX,
   TX_FIELD('key', FIELD_TYPES.hex),
   TX_FIELD('value', FIELD_TYPES.rawBinary)
 ]
 
+interface TxContractsTree extends TxBase{
+  contracts: Buffer
+}
 const CONTRACTS_TREE_TX = [
   ...BASE_TX,
   TX_FIELD('contracts', FIELD_TYPES.rlpBinary)
 ]
 
+interface TxCallsTree extends TxBase{
+  calls: Buffer
+}
 const CONTRACT_CALLS_TREE_TX = [
   ...BASE_TX,
   TX_FIELD('calls', FIELD_TYPES.rlpBinary)
 ]
 
+interface TxChannelsTree extends TxBase{
+  channels: Buffer
+}
 const CHANNELS_TREE_TX = [
   ...BASE_TX,
   TX_FIELD('channels', FIELD_TYPES.rlpBinary)
 ]
 
+interface TxNameServiceTree extends TxBase{
+  mtree: Buffer
+}
 const NAMESERVICE_TREE_TX = [
   ...BASE_TX,
   TX_FIELD('mtree', FIELD_TYPES.rlpBinary)
 ]
 
+interface TxOraclesTree extends TxBase{
+  otree: Buffer
+}
 const ORACLES_TREE_TX = [
   ...BASE_TX,
   TX_FIELD('otree', FIELD_TYPES.rlpBinary)
 ]
 
+interface TxAccountsTree extends TxBase{
+  accounts: Buffer
+}
 const ACCOUNTS_TREE_TX = [
   ...BASE_TX,
   TX_FIELD('accounts', FIELD_TYPES.rlpBinary)
 ]
 
-export const TX_SERIALIZATION_SCHEMA = {
+export type TxType = TxAccount | TxSpend | TxSigned
+| TxContract | TxContractCall | TxContractCallResult | TxContractCreate | TxGaAttach | TxGaMeta2
+| TxNameClaim2 | TxNamePreClaim | TxNameRevoke
+| TxNameTransfer | TxNameUpdate | TxOracleExtend | TxOracleQuery
+| TxOracleRegister | TxPayingFor | TxOracleRespond | TxChannelCreate2 | TxChannelClose
+| TxChannelCloseSolo | TxChannelWithdraw | TxChannelCloseMutual | TxChannelReconnect
+| TxChannelSlash | TxChannelSettle | TxChannelOffchainUpdateTransfer
+| TxChannelOffchainUpdateDeposit | TxChannelOffchainUpdateWithdrawal
+| TxChannelForceProgress | TxChannelOffchain2 | TxChannel3 | TxChannelClose
+| TxChannelSnapshotSolo | TxChannelOffchainCreateContract | TxChannelOffchainCallContract
+| TxProofOfInclusion | TxStateTrees | TxMerklePatriciaTree | TxMerklePatriciaTreeValue
+| TxContractsTree | TxCallsTree | TxChannelsTree | TxNameServiceTree | TxOraclesTree
+| TxAccountsTree
+
+interface TxSchema {
+  [key: string]: {
+    [key: string]: [schema: TxField[], tag:string | number] }
+}
+
+export const TX_SERIALIZATION_SCHEMA: TxSchema = {
   [TX_TYPE.account]: {
     2: TX_SCHEMA_FIELD(ACCOUNT_TX_2, OBJECT_TAG_ACCOUNT)
   },
@@ -944,7 +1333,7 @@ export const TX_SERIALIZATION_SCHEMA = {
   }
 }
 
-export const TX_DESERIALIZATION_SCHEMA = {
+export const TX_DESERIALIZATION_SCHEMA: TxSchema = {
   [OBJECT_TAG_ACCOUNT]: {
     2: TX_SCHEMA_FIELD(ACCOUNT_TX_2, OBJECT_TAG_ACCOUNT)
   },
