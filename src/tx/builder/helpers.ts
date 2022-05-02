@@ -1,6 +1,6 @@
 import BigNumber from 'bignumber.js'
 import { hash, salt } from '../../utils/crypto'
-import { encode, decode } from '../../utils/encoder'
+import { encode, decode, EncodedData } from '../../utils/encoder'
 import { toBytes } from '../../utils/bytes'
 import {
   ID_TAG_PREFIX,
@@ -124,7 +124,7 @@ export function writeId (hashId: string): Buffer {
   const prefix = hashId.slice(0, 2)
   const idTag = PREFIX_ID_TAG[prefix]
   if (Number.isNaN(idTag)) throw new TagNotFoundError(prefix)
-  return Buffer.from([...toBytes(idTag), ...decode(hashId, prefix)])
+  return Buffer.from([...toBytes(idTag), ...decode(hashId as EncodedData<string>, prefix)])
 }
 
 /**
@@ -208,7 +208,6 @@ const AENS_SUFFIX = '.chain'
  * @throws Error
  */
 export function ensureNameValid (name: string): void {
-  if ((name.length === 0) || typeof name !== 'string') throw new InvalidNameError('Name must be a string')
   if (!name.endsWith(AENS_SUFFIX)) throw new InvalidNameError(`Name should end with ${AENS_SUFFIX}: ${name}`)
 }
 
@@ -233,7 +232,7 @@ export function isNameValid (name: string): boolean {
  * @returns {String} default AENS pointer key
  * @throws exception when default key not defined
  */
-export function getDefaultPointerKey (identifier: string): string {
+export function getDefaultPointerKey (identifier: EncodedData<string>): string {
   decode(identifier)
   const prefix = identifier.substring(0, 2)
   const pointerKey = POINTER_KEY_BY_PREFIX[prefix]
@@ -261,9 +260,9 @@ export function getMinimumNameFee (name: string): BigNumber {
  * @function
  * @alias module:@aeternity/aepp-sdk/es/tx/builder/helpers
  * @param {String} name the AENS name to get the fee for
- * @param {Number} startFee Auction start fee
+ * @param {Number | String} startFee Auction start fee
  * @param {Number} [increment=0.5] Bid multiplier(In percentage, must be between 0 and 1)
- * @return {Number} Bid fee
+ * @return {BigNumber} Bid fee
  */
 export function computeBidFee (
   name: string,
@@ -285,7 +284,7 @@ export function computeBidFee (
  * @param {Number|String} claimHeight Auction starting height
  * @return {String} Auction end height
  */
-export function computeAuctionEndBlock (name: string, claimHeight: number): string {
+export function computeAuctionEndBlock (name: string, claimHeight: number | string): string {
   ensureNameValid(name)
   const length = name.length - AENS_SUFFIX.length
   const h = (length <= 4 && NAME_BID_TIMEOUTS[4]) ||
