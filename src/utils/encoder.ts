@@ -19,9 +19,9 @@ export function sha256hash (input: Uint8Array | string): Buffer {
 }
 
 // based on https://github.com/aeternity/protocol/blob/master/node/api/api_encoding.md
-const base64Types = ['ba', 'cb', 'or', 'ov', 'pi', 'ss', 'cs', 'ck', 'cv', 'st', 'tx']
-const base58Types = ['ak', 'bf', 'bs', 'bx', 'ch', 'cm', 'ct', 'kh', 'mh', 'nm', 'ok', 'oq', 'pp', 'sg', 'th']
-export type EncodingType = typeof base64Types[number] | typeof base58Types[number]
+const base64Types = ['ba', 'cb', 'or', 'ov', 'pi', 'ss', 'cs', 'ck', 'cv', 'st', 'tx'] as const
+const base58Types = ['ak', 'bf', 'bs', 'bx', 'ch', 'cm', 'ct', 'kh', 'mh', 'nm', 'ok', 'oq', 'pp', 'sg', 'th'] as const
+export type EncodingType = typeof base64Types[number] | typeof base58Types[number] | string
 export type EncodedData<Type extends EncodingType> = `${Type}_${string}`
 // TODO: add all types with a fixed length
 const typesLength: { [name in EncodingType]?: number } = {
@@ -97,7 +97,9 @@ export function decode (data: EncodedData<EncodingType>, requiredPrefix?: Encodi
  * @param {string} type Prefix of Transaction
  * @return {EncodedData<type>>} Encoded string Base58check or Base64check data
  */
-export function encode (data: Uint8Array, type: EncodingType): EncodedData<typeof type> {
+export function encode <Prefix extends EncodingType> (
+  data: Uint8Array,
+  type: Prefix): EncodedData<Prefix> {
   const [, { encode }] = parseType(type)
   ensureValidLength(data, type)
   return `${type}_${encode(data)}`

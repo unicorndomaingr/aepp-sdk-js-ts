@@ -80,11 +80,13 @@ const OBJECT_TAG_GA_META = 81
 const OBJECT_TAG_PAYING_FOR = 82
 const OBJECT_TAG_SOPHIA_BYTE_CODE = 70
 
-export type TxField = [name: string, type: string | typeof Field, prefix: string | string[]]
+export type TxField = [name: string,
+   type: string | typeof Field,
+   prefix: EncodingType | EncodingType[] | '']
 const TX_FIELD: (
   name: string,
   type: string | typeof Field,
-  prefix?: string | string[]
+  prefix?: EncodingType | EncodingType[] | ''
 ) => TxField = (name, type, prefix = '') => [name, type, prefix]
 
 type TxSchemaField = (
@@ -154,7 +156,10 @@ export const TX_TYPE = {
   gaMeta: 'gaMeta',
   payingFor: 'payingFor',
   sophiaByteCode: 'sophiaByteCode'
-}
+} as const
+
+type TxTypeKey = keyof typeof TX_TYPE
+export type TxType = typeof TX_TYPE[TxTypeKey]
 
 // # see https://github.com/aeternity/protocol/blob/minerva/contracts/contract_vms.md#virtual-machines-on-the-%C3%A6ternity-blockchain
 export const VM_VERSIONS = {
@@ -178,7 +183,14 @@ export const PROTOCOL_VERSIONS = {
 }
 
 // First abi/vm by default
-export const PROTOCOL_VM_ABI = {
+export const PROTOCOL_VM_ABI: {
+  [key: number]: {
+    [txType: string]: {
+      vmVersion: number[]
+      abiVersion: number[]
+    }
+  }
+} = {
   [PROTOCOL_VERSIONS.IRIS]: {
     [TX_TYPE.contractCreate]: {
       vmVersion: [VM_VERSIONS.FATE_2], abiVersion: [ABI_VERSIONS.FATE]
@@ -296,8 +308,10 @@ export const KEY_BLOCK_INTERVAL = 3
  * @returns The base fee
  * @example TX_FEE_BASE('channelForceProgress') => new BigNumber(30 * 15000)
  */
-export const TX_FEE_BASE_GAS = (txType: string): BigNumber => {
-  const factor = ({
+export const TX_FEE_BASE_GAS = (txType: TxType): BigNumber => {
+  const feeFactors: {
+    [key in TxType]?: number
+  } = {
     [TX_TYPE.channelForceProgress]: 30,
     [TX_TYPE.channelOffChain]: 0,
     [TX_TYPE.channelOffChainCallContract]: 0,
@@ -310,7 +324,8 @@ export const TX_FEE_BASE_GAS = (txType: string): BigNumber => {
     [TX_TYPE.gaAttach]: 5,
     [TX_TYPE.gaMeta]: 5,
     [TX_TYPE.payingFor]: 1 / 5
-  })[txType] ?? 1
+  }
+  const factor = feeFactors[txType] ?? 1
   return new BigNumber(factor * BASE_GAS)
 }
 
@@ -370,7 +385,7 @@ export const CONTRACT_BYTE_CODE_LIMA = [
   TX_FIELD('payable', FIELD_TYPES.bool)
 ]
 
-interface TxAccount extends TxBase {
+export interface TxAccount extends TxBase {
   flags: number
   balance: number
   gaContract: string
@@ -405,9 +420,18 @@ const SPEND_TX = [
   TX_FIELD('payload', FIELD_TYPES.payload)
 ]
 
-interface TxSigned extends TxBase {
+export interface EncodedTx {
+  txType: typeof TX_TYPE[keyof typeof TX_TYPE]
+  rlpEncoded: Buffer
+  binary: Buffer[]
+  tx: TxParams
+  fee: BigNumber
+}
+export interface TxSigned extends TxBase {
   signatures: string[]
   rlpBinary: Buffer
+  encodedTx: EncodedTx
+  fee: BigNumber
 }
 const SIGNED_TX = [
   ...BASE_TX,
@@ -415,7 +439,7 @@ const SIGNED_TX = [
   TX_FIELD('encodedTx', FIELD_TYPES.rlpBinary)
 ]
 
-interface TxNamePreClaim extends TxBase {
+export interface TxNamePreClaim extends TxBase {
   accountId: string
   nonce: number
   commitmentId: string
@@ -471,7 +495,7 @@ const NAME_UPDATE_TX = [
   TX_FIELD('ttl', FIELD_TYPES.int)
 ]
 
-interface TxNameTransfer extends TxBase {
+export interface TxNameTransfer extends TxBase {
   accountId: string
   nonce: number
   nameId: string
@@ -500,7 +524,7 @@ const NAME_REVOKE_TX = [
   TX_FIELD('ttl', FIELD_TYPES.int)
 ]
 
-interface TxContract extends TxBase {
+export interface TxContract extends TxBase {
   owner: string
   ctVersion?: number
   code: string
@@ -520,7 +544,7 @@ const CONTRACT_TX = [
   TX_FIELD('deposit', Deposit)
 ]
 
-interface TxGaAttach extends TxBase {
+export interface TxGaAttach extends TxBase {
   ownerId: string
   code: string
   authFun: Function
@@ -543,7 +567,7 @@ const GA_ATTACH_TX = [
   TX_FIELD('callData', FIELD_TYPES.binary, 'cb')
 ]
 
-interface TxGaMeta2 extends TxBase {
+export interface TxGaMeta2 extends TxBase {
   gaId: string
   authData: string
   abiVersion: number
@@ -563,7 +587,7 @@ const GA_META_TX_2 = [
   TX_FIELD('tx', FIELD_TYPES.rlpBinary)
 ]
 
-interface TxPayingFor extends TxBase {
+export interface TxPayingFor extends TxBase {
   payerId: string
   fee: BigNumber
   tx: Buffer
@@ -576,7 +600,7 @@ const PAYING_FOR_TX = [
   TX_FIELD('tx', FIELD_TYPES.rlpBinary)
 ]
 
-interface TxContractCreate extends TxBase {
+export interface TxContractCreate extends TxBase {
   ownerId: string
   code: string
   ctVersion?: number
@@ -602,7 +626,7 @@ const CONTRACT_CREATE_TX = [
   TX_FIELD('callData', FIELD_TYPES.binary, 'cb')
 ]
 
-interface TxContractCall extends TxBase {
+export interface TxContractCall extends TxBase {
   callerId: string
   contractId: string
   abiVersion?: number
@@ -625,7 +649,7 @@ const CONTRACT_CALL_TX = [
   TX_FIELD('callData', FIELD_TYPES.binary, 'cb')
 ]
 
-interface TxContractCallResult extends TxBase {
+export interface TxContractCallResult extends TxBase {
   callerId: string
   callerNonce: number
   height: number
@@ -674,7 +698,7 @@ const ORACLE_REGISTER_TX = [
   TX_FIELD('abiVersion', FIELD_TYPES.int)
 ]
 
-interface TxOracleExtend extends TxBase {
+export interface TxOracleExtend extends TxBase {
   oracleId: string
   callerId?: string
   oracleTtl?: { type: string, value: number}
@@ -689,7 +713,7 @@ const ORACLE_EXTEND_TX = [
   TX_FIELD('ttl', FIELD_TYPES.int)
 ]
 
-interface TxOracleQuery extends TxBase {
+export interface TxOracleQuery extends TxBase {
   senderId: string
   oracleId: string
   query: string
@@ -712,7 +736,7 @@ const ORACLE_QUERY_TX = [
   TX_FIELD('ttl', FIELD_TYPES.int)
 ]
 
-interface TxOracleRespond extends TxBase {
+export interface TxOracleRespond extends TxBase {
   oracleId: string
 
   response: string
@@ -733,7 +757,7 @@ const ORACLE_RESPOND_TX = [
   TX_FIELD('ttl', FIELD_TYPES.int)
 ]
 
-interface TxChannelCreate2 extends TxBase {
+export interface TxChannelCreate2 extends TxBase {
   initiator: string
   initiatorAmount: number
   responder: string
@@ -761,7 +785,7 @@ const CHANNEL_CREATE_TX_2 = [
   TX_FIELD('nonce', FIELD_TYPES.int)
 ]
 
-interface TxChannelClose extends TxBase {
+export interface TxChannelClose extends TxBase {
   channelId: string
   fromId: string
   amount: number
@@ -781,7 +805,7 @@ const CHANNEL_DEPOSIT_TX = [
   TX_FIELD('nonce', FIELD_TYPES.int)
 ]
 
-interface TxChannelWithdraw extends TxBase {
+export interface TxChannelWithdraw extends TxBase {
   channelId: string
   toId: string
   amount: number
@@ -801,14 +825,11 @@ const CHANNEL_WITHDRAW_TX = [
   TX_FIELD('nonce', FIELD_TYPES.int)
 ]
 
-interface TxChannelCloseMutual extends TxBase {
+export interface TxChannelCloseMutual extends TxBase {
   channelId: string
   fromId: string
   initiatorAmountFinal: number
   responderAmountFinal: number
-  ttl: number
-  fee: number
-  nonce: string
 }
 const CHANNEL_CLOSE_MUTUAL_TX = [
   ...BASE_TX,
@@ -821,7 +842,7 @@ const CHANNEL_CLOSE_MUTUAL_TX = [
   TX_FIELD('nonce', FIELD_TYPES.int)
 ]
 
-interface TxChannelCloseSolo extends TxBase {
+export interface TxChannelCloseSolo extends TxBase {
   channelId: string
   fromId: string
   payload: string
@@ -839,7 +860,7 @@ const CHANNEL_CLOSE_SOLO_TX = [
   TX_FIELD('nonce', FIELD_TYPES.int)
 ]
 
-interface TxChannelSlash extends TxBase {
+export interface TxChannelSlash extends TxBase {
   channelId: string
   fromId: string
   payload: string
@@ -857,7 +878,7 @@ const CHANNEL_SLASH_TX = [
   TX_FIELD('nonce', FIELD_TYPES.int)
 ]
 
-interface TxChannelSettle extends TxBase {
+export interface TxChannelSettle extends TxBase {
   channelId: string
   fromId: string
   initiatorAmountFinal: number
@@ -874,17 +895,14 @@ const CHANNEL_SETTLE_TX = [
   TX_FIELD('nonce', FIELD_TYPES.int)
 ]
 
-interface TxChannelForceProgress extends TxBase {
+export interface TxChannelForceProgress extends TxBase {
   channelId: string
   fromId: string
   payload: string
   round: number
   update: string
   stateHash: string
-  offChainTrees: string //! Test
-  ttl: number
-  fee: number
-  nonce: number
+  offChainTrees: string
 }
 const CHANNEL_FORCE_PROGRESS_TX = [
   ...BASE_TX,
@@ -900,7 +918,7 @@ const CHANNEL_FORCE_PROGRESS_TX = [
   TX_FIELD('nonce', FIELD_TYPES.int)
 ]
 
-interface TxChannelOffchain2 extends TxBase {
+export interface TxChannelOffchain2 extends TxBase {
   channelId: string
   round: number
   stateHash: string
@@ -912,7 +930,7 @@ const CHANNEL_OFFCHAIN_TX_2 = [
   TX_FIELD('stateHash', FIELD_TYPES.binary, 'st')
 ]
 
-interface TxChannel3 extends TxBase {
+export interface TxChannel3 extends TxBase {
   initiator: string
   responder: string
   channelAmount: number
@@ -948,7 +966,7 @@ const CHANNEL_TX_3 = [
   TX_FIELD('responderAuth', FIELD_TYPES.binary, 'cb')
 ]
 
-interface TxChannelSnapshotSolo extends TxBase {
+export interface TxChannelSnapshotSolo extends TxBase {
   channelId: string
   fromId: string
   payload: string
@@ -963,7 +981,7 @@ const CHANNEL_SNAPSHOT_SOLO_TX = [
   TX_FIELD('nonce', FIELD_TYPES.int)
 ]
 
-interface TxChannelOffchainCreateContract extends TxBase {
+export interface TxChannelOffchainCreateContract extends TxBase {
   owner: string
   ctVersion?: number
   code: string
@@ -979,7 +997,7 @@ const CHANNEL_OFFCHAIN_CREATE_CONTRACT_TX = [
   TX_FIELD('callData', FIELD_TYPES.binary, 'cb')
 ]
 
-interface TxChannelOffchainCallContract extends TxBase {
+export interface TxChannelOffchainCallContract extends TxBase {
   caller: string
   contract: string
   abiVersion?: number
@@ -1001,7 +1019,7 @@ const CHANNEL_OFFCHAIN_CALL_CONTRACT_TX = [
   TX_FIELD('gasLimit', FIELD_TYPES.int)
 ]
 
-interface TxChannelReconnect extends TxBase {
+export interface TxChannelReconnect extends TxBase {
   channelId: string
   round: number
   role: string
@@ -1015,7 +1033,7 @@ const CHANNEL_RECONNECT_TX = [
   TX_FIELD('pubkey', FIELD_TYPES.id, 'ak')
 ]
 
-interface TxChannelOffchainUpdateTransfer extends TxBase {
+export interface TxChannelOffchainUpdateTransfer extends TxBase {
   from: string
   to: string
   amount: number
@@ -1027,7 +1045,7 @@ const CHANNEL_OFFCHAIN_UPDATE_TRANSFER_TX = [
   TX_FIELD('amount', FIELD_TYPES.int)
 ]
 
-interface TxChannelOffchainUpdateDeposit extends TxBase {
+export interface TxChannelOffchainUpdateDeposit extends TxBase {
   from: string
   amount: number
 }
@@ -1037,7 +1055,7 @@ const CHANNEL_OFFCHAIN_UPDATE_DEPOSIT_TX = [
   TX_FIELD('amount', FIELD_TYPES.int)
 ]
 
-interface TxChannelOffchainUpdateWithdrawal extends TxBase {
+export interface TxChannelOffchainUpdateWithdrawal extends TxBase {
   from: string
   amount: number
 }
@@ -1047,7 +1065,7 @@ const CHANNEL_OFFCHAIN_UPDATE_WITHDRAWAL_TX = [
   TX_FIELD('amount', FIELD_TYPES.int)
 ]
 
-interface TxProofOfInclusion extends TxBase {
+export interface TxProofOfInclusion extends TxBase {
   accounts: MPTree[]
   calls: MPTree[]
   contracts: MPTree[]
@@ -1065,7 +1083,7 @@ const PROOF_OF_INCLUSION_TX = [
   TX_FIELD('oracles', FIELD_TYPES.mptrees)
 ]
 
-interface TxStateTrees{
+export interface TxStateTrees{
   contracts: MPTree[]
   calls: MPTree[]
   channels: MPTree[]
@@ -1083,7 +1101,7 @@ const STATE_TREES_TX = [
   TX_FIELD('accounts', FIELD_TYPES.rlpBinary)
 ]
 
-interface TxMerklePatriciaTree extends TxBase{
+export interface TxMerklePatriciaTree extends TxBase{
   values: Buffer[]
 }
 const MERKLE_PATRICIA_TREE_TX = [
@@ -1091,7 +1109,7 @@ const MERKLE_PATRICIA_TREE_TX = [
   TX_FIELD('values', FIELD_TYPES.rlpBinaries)
 ]
 
-interface TxMerklePatriciaTreeValue extends TxBase{
+export interface TxMerklePatriciaTreeValue extends TxBase{
   key: string
   value: string
 }
@@ -1101,7 +1119,7 @@ const MERKLE_PATRICIA_TREE_VALUE_TX = [
   TX_FIELD('value', FIELD_TYPES.rawBinary)
 ]
 
-interface TxContractsTree extends TxBase{
+export interface TxContractsTree extends TxBase{
   contracts: Buffer
 }
 const CONTRACTS_TREE_TX = [
@@ -1109,7 +1127,7 @@ const CONTRACTS_TREE_TX = [
   TX_FIELD('contracts', FIELD_TYPES.rlpBinary)
 ]
 
-interface TxCallsTree extends TxBase{
+export interface TxCallsTree extends TxBase{
   calls: Buffer
 }
 const CONTRACT_CALLS_TREE_TX = [
@@ -1117,7 +1135,7 @@ const CONTRACT_CALLS_TREE_TX = [
   TX_FIELD('calls', FIELD_TYPES.rlpBinary)
 ]
 
-interface TxChannelsTree extends TxBase{
+export interface TxChannelsTree extends TxBase{
   channels: Buffer
 }
 const CHANNELS_TREE_TX = [
@@ -1125,7 +1143,7 @@ const CHANNELS_TREE_TX = [
   TX_FIELD('channels', FIELD_TYPES.rlpBinary)
 ]
 
-interface TxNameServiceTree extends TxBase{
+export interface TxNameServiceTree extends TxBase{
   mtree: Buffer
 }
 const NAMESERVICE_TREE_TX = [
@@ -1133,7 +1151,7 @@ const NAMESERVICE_TREE_TX = [
   TX_FIELD('mtree', FIELD_TYPES.rlpBinary)
 ]
 
-interface TxOraclesTree extends TxBase{
+export interface TxOraclesTree extends TxBase{
   otree: Buffer
 }
 const ORACLES_TREE_TX = [
@@ -1141,7 +1159,7 @@ const ORACLES_TREE_TX = [
   TX_FIELD('otree', FIELD_TYPES.rlpBinary)
 ]
 
-interface TxAccountsTree extends TxBase{
+export interface TxAccountsTree extends TxBase{
   accounts: Buffer
 }
 const ACCOUNTS_TREE_TX = [
@@ -1149,7 +1167,7 @@ const ACCOUNTS_TREE_TX = [
   TX_FIELD('accounts', FIELD_TYPES.rlpBinary)
 ]
 
-export type TxType = TxAccount | TxSpend | TxSigned
+export type TxParams = TxAccount | TxSpend | TxSigned
 | TxContract | TxContractCall | TxContractCallResult | TxContractCreate | TxGaAttach | TxGaMeta2
 | TxNameClaim2 | TxNamePreClaim | TxNameRevoke
 | TxNameTransfer | TxNameUpdate | TxOracleExtend | TxOracleQuery
@@ -1163,7 +1181,7 @@ export type TxType = TxAccount | TxSpend | TxSigned
 | TxContractsTree | TxCallsTree | TxChannelsTree | TxNameServiceTree | TxOraclesTree
 | TxAccountsTree
 
-interface TxSchema {
+export interface TxSchema {
   [key: string]: {
     [key: string]: [schema: TxField[], tag:string | number] }
 }

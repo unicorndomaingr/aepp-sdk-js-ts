@@ -1,3 +1,4 @@
+import { EncodedData, EncodingType } from './../../utils/encoder'
 import BigNumber from 'bignumber.js'
 import { decode as rlpDecode, encode as rlpEncode, NestedUint8Array } from 'rlp'
 import { AE_AMOUNT_FORMATS, formatAmount } from '../../utils/amount-formatter'
@@ -9,6 +10,7 @@ import {
   FIELD_TYPES,
   OBJECT_ID_TX_TYPE,
   TxField,
+  TxParams,
   TxType,
   TX_DESERIALIZATION_SCHEMA,
   TX_FEE_BASE_GAS,
@@ -31,7 +33,6 @@ import {
 import { toBytes } from '../../utils/bytes'
 import MPTree, { MPTreeBinary } from '../../utils/mptree'
 import { InvalidTxParamsError, SchemaNotFoundError } from '../../utils/errors'
-import { EncodedData } from '../../utils/encoder'
 
 /**
  * JavaScript-based Transaction builder
@@ -238,7 +239,7 @@ const ORACLE_TTL_TYPES = {
 function deserializeField (
   value: any,
   type: string | typeof Field | Function,
-  prefix: string | string[]
+  prefix: EncodingType | EncodingType[]
 ): any {
   if (value == null) return ''
   switch (type) {
@@ -318,7 +319,7 @@ function deserializeField (
 
 function serializeField (value: any,
   type: string | Function | typeof Field,
-  prefix: string, params: any): any {
+  prefix: EncodingType, params: any): any {
   switch (type) {
     case FIELD_TYPES.amount:
     case FIELD_TYPES.int:
@@ -371,7 +372,7 @@ function serializeField (value: any,
 
 function validateField (
   value: any, type: string | Function | typeof Field,
-  prefix: string | string[]): string | undefined {
+  prefix: EncodingType | EncodingType[]): string | undefined {
   // All fields are required
   if (value == null) return 'Field is required'
 
@@ -438,17 +439,19 @@ function transformParams (
 
 // INTERFACE
 
-function getOracleRelativeTtl (params: any, txType: string): number {
-  const ttlKey = {
+function getOracleRelativeTtl (params: any, txType: TxType): number {
+  const ttlKeys: {
+    [key in TxType]?: string
+  } = {
     [TX_TYPE.oracleRegister]: 'oracleTtl',
     [TX_TYPE.oracleExtend]: 'oracleTtl',
     [TX_TYPE.oracleQuery]: 'queryTtl',
     [TX_TYPE.oracleResponse]: 'responseTtl'
-  }[txType]
-
-  if (params[`${ttlKey}Value`] > 0) { return params[`${ttlKey}Value`] }
-  if (params[ttlKey]?.value > 0) { return params[ttlKey].value }
-  return 1
+  }
+  const ttlKey = ttlKeys[txType]
+  if (ttlKey == null) return 1
+  else if (params[`${ttlKey}Value`] > 0) return params[`${ttlKey}Value`]
+  else return params[ttlKey].value
 }
 
 /**
@@ -460,7 +463,7 @@ function getOracleRelativeTtl (params: any, txType: string): number {
  * @param options.params - Tx params
  * @example calculateMinFee('spendTx', { gasLimit, params })
  */
-export function calculateMinFee (txType: string, { params, vsn }: {
+export function calculateMinFee (txType: TxType, { params, vsn }: {
   gasLimit?: string | number
   params?: Object
   vsn?: number
@@ -490,14 +493,14 @@ export function calculateMinFee (txType: string, { params, vsn }: {
  * @param options.vsn
  * @return {BigNumber}
  */
-function buildFee (txType: string, { params, multiplier, vsn }:
+function buildFee (txType: TxType, { params, multiplier, vsn }:
 {params: any, multiplier: BigNumber, vsn?: number}): BigNumber {
   const { rlpEncoded: txWithOutFee } = buildTx({ ...params }, txType, { vsn })
   const txSize = txWithOutFee.length
   return TX_FEE_BASE_GAS(txType)
     .plus(TX_FEE_OTHER_GAS(txType, txSize, {
       relativeTtl: getOracleRelativeTtl(params, txType),
-      innerTxSize: [TX_TYPE.gaMeta, TX_TYPE.payingFor].includes(txType)
+      innerTxSize: ([TX_TYPE.gaMeta, TX_TYPE.payingFor] as Array<typeof txType>).includes(txType)
         ? params.tx.tx.encodedTx.rlpEncoded.length
         : 0
     }))
@@ -516,9 +519,7 @@ function buildFee (txType: string, { params, multiplier, vsn }:
  * @example calculateFee(null, 'spendTx', { gasLimit, params })
  */
 export function calculateFee (
-  fee: number | BigNumber | string = 0,
-  txType: TxType,
-  { gasLimit = 0, params, showWarning = true, vsn }: {
+  fee: number = 0, txType: TxType, { gasLimit = 0, params, showWarning = true, vsn }: {
     gasLimit?: number
     params?: any
     showWarning?: boolean
@@ -595,7 +596,9 @@ export function buildRawTx (
  * @param schema Transaction schema
  * @return Object with transaction field's
  */
-export function unpackRawTx (binary: Uint8Array | NestedUint8Array, schema: TxField[]): TxType {
+export function unpackRawTx (
+  binary: Uint8Array | NestedUint8Array,
+  schema: TxField[]): TxParams {
   return schema
     .reduce<any>(
     (
@@ -638,7 +641,7 @@ export interface TxHash<Tx extends TxParams> {
   tx: EncodedData<'tx'>
   rlpEncoded: Buffer
   binary: Uint8Array | NestedUint8Array
-  txObject: TxType
+  txObject: TxParams
 }
 /**
  * Build transaction hash
@@ -673,10 +676,10 @@ export function buildTx (
   return { tx, rlpEncoded, binary, txObject: unpackRawTx(binary, schema) }
 }
 
-interface TxHashUnpacked {
+export interface TxHashUnpacked {
   txType: string
-  tx: TxType
-  rlpEncoded: Buffer | string
+  tx: TxParams
+  rlpEncoded: Buffer | EncodedData<'tx'>
   binary: Uint8Array | NestedUint8Array
 }
 /**
@@ -692,10 +695,10 @@ interface TxHashUnpacked {
  * @returns object.rlpEncoded rlp encoded transaction
  * @returns object.binary binary transaction
  */
-export function unpackTx (encodedTx: string | Buffer, fromRlpBinary: boolean = false, prefix: string = 'tx'): TxHashUnpacked {
+export function unpackTx (encodedTx: EncodedData<'tx'> | Buffer, fromRlpBinary: boolean = false, prefix: EncodingType = 'tx'): TxHashUnpacked {
   const rlpEncoded = fromRlpBinary
     ? encodedTx
-    : decode(encodedTx.toString() as EncodedData<string>, prefix)
+    : decode(encodedTx.toString() as EncodedData<'tx'>, prefix)
   const binary = rlpDecode(rlpEncoded)
 
   const objId = readInt(binary[0] as Buffer)

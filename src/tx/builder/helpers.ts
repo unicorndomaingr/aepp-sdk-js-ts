@@ -117,7 +117,7 @@ export function writeId (hashId: string): Buffer {
   const prefix = hashId.slice(0, 2)
   const idTag = PREFIX_ID_TAG[prefix]
   if (Number.isNaN(idTag)) throw new TagNotFoundError(prefix)
-  return Buffer.from([...toBytes(idTag), ...decode(hashId as EncodedData<string>, prefix)])
+  return Buffer.from([...toBytes(idTag), ...decode(hashId as EncodedData<'tx'>, prefix)])
 }
 
 /**

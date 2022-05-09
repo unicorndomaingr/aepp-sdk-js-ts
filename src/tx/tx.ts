@@ -1,3 +1,4 @@
+import { BigNumber } from 'bignumber.js'
 /*
  * ISC License (ISC)
  * Copyright (c) 2022 aeternity developers
@@ -22,11 +23,13 @@
  * @example import { Transaction } from '@aeternity/aepp-sdk'
  */
 
+// @ts-expect-error
 import Ae from '../ae'
-import Tx from './'
+import { EncodedData } from './../utils/encoder'
+import Tx from '.'
 import { buildTx, calculateFee, unpackTx } from './builder'
-import { ABI_VERSIONS, MIN_GAS_PRICE, PROTOCOL_VM_ABI, TX_TYPE, TX_TTL } from './builder/schema'
 import { buildContractId } from './builder/helpers'
+// @ts-expect-error TODO: remove me
 import { TxObject } from './tx-object'
 import {
   ArgumentError,
@@ -35,12 +38,47 @@ import {
   UnsupportedProtocolError,
   UnknownTxError
 } from '../utils/errors'
+import {
+  TxNameRevoke,
+  TxContractCreate,
+  TxContractCall,
+  TxOracleRegister,
+  TxOracleExtend,
+  TxOracleQuery,
+  TxOracleRespond,
+  TxChannelCloseSolo,
+  TxChannelSlash,
+  TxChannelSettle,
+  TxChannelSnapshotSolo,
+  TxGaAttach,
+  TxPayingFor,
+  TxBase,
+  ABI_VERSIONS,
+  MIN_GAS_PRICE,
+  PROTOCOL_VM_ABI,
+  TX_TYPE,
+  TX_TTL,
+  TxNamePreClaim,
+  TxNameClaim2,
+  TxSpend,
+  TxNameTransfer,
+  TxNameUpdate,
+  TxParams,
+  TxType
+} from './builder/schema'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import stampit from '@stamp/it'
 
-async function spendTx ({ senderId, recipientId, payload = '' }) {
+interface VmVersion {
+  vmVersion: number
+  abiVersion: number
+}
+
+async function spendTx ({ senderId, recipientId, payload = '' }: TxSpend): Promise<string> {
   const { ttl, nonce } = await this.prepareTxParams(
     TX_TYPE.spend, { senderId, ...arguments[0], payload }
   )
-  return TxObject({
+  const res = TxObject({
     params: {
       ...arguments[0],
       recipientId,
@@ -51,9 +89,10 @@ async function spendTx ({ senderId, recipientId, payload = '' }) {
     },
     type: TX_TYPE.spend
   }).encodedTx
+  return res
 }
 
-async function namePreclaimTx ({ accountId }) {
+async function namePreclaimTx ({ accountId }: TxNamePreClaim): Promise<string> {
   const { fee, ttl, nonce } = await this.prepareTxParams(
     TX_TYPE.namePreClaim, { senderId: accountId, ...arguments[0] }
   )
@@ -63,7 +102,7 @@ async function namePreclaimTx ({ accountId }) {
   }).encodedTx
 }
 
-async function nameClaimTx ({ accountId, vsn = 2 }) {
+async function nameClaimTx ({ accountId, vsn = 2 }: TxNameClaim2): Promise<string> {
   const { fee, ttl, nonce } = await this.prepareTxParams(
     TX_TYPE.nameClaim, { senderId: accountId, ...arguments[0], vsn }
   )
@@ -73,7 +112,7 @@ async function nameClaimTx ({ accountId, vsn = 2 }) {
   }).encodedTx
 }
 
-async function nameTransferTx ({ accountId, recipientId }) {
+async function nameTransferTx ({ accountId, recipientId }: TxNameTransfer): Promise<string> {
   const { fee, ttl, nonce } = await this.prepareTxParams(
     TX_TYPE.nameTransfer, { senderId: accountId, ...arguments[0] }
   )
@@ -83,7 +122,7 @@ async function nameTransferTx ({ accountId, recipientId }) {
   }).encodedTx
 }
 
-async function nameUpdateTx ({ accountId }) {
+async function nameUpdateTx ({ accountId }: TxNameUpdate): Promise<string> {
   const { fee, ttl, nonce } = await this.prepareTxParams(
     TX_TYPE.nameUpdate, { senderId: accountId, ...arguments[0] }
   )
@@ -93,7 +132,7 @@ async function nameUpdateTx ({ accountId }) {
   }).encodedTx
 }
 
-async function nameRevokeTx ({ accountId }) {
+async function nameRevokeTx ({ accountId }: TxNameRevoke): Promise<string> {
   const { fee, ttl, nonce } = await this.prepareTxParams(
     TX_TYPE.nameRevoke, { senderId: accountId, ...arguments[0] }
   )
@@ -103,7 +142,11 @@ async function nameRevokeTx ({ accountId }) {
   }).encodedTx
 }
 
-async function contractCreateTx ({ ownerId, gasPrice = MIN_GAS_PRICE }) {
+async function contractCreateTx (
+  { ownerId, gasPrice = MIN_GAS_PRICE }: TxContractCreate): Promise<{
+    tx: TxParams
+    contractId: string
+  }> {
   const ctVersion = this.getVmVersion(TX_TYPE.contractCreate, arguments[0])
   const { fee, ttl, nonce } = await this.prepareTxParams(
     TX_TYPE.contractCreate, { senderId: ownerId, ...arguments[0], ctVersion, gasPrice }
@@ -117,7 +160,8 @@ async function contractCreateTx ({ ownerId, gasPrice = MIN_GAS_PRICE }) {
   }
 }
 
-async function contractCallTx ({ callerId, gasPrice = MIN_GAS_PRICE }) {
+async function contractCallTx (
+  { callerId, gasPrice = MIN_GAS_PRICE }: TxContractCall): Promise<string> {
   const ctVersion = this.getVmVersion(TX_TYPE.contractCall, arguments[0])
   const { fee, ttl, nonce } = await this.prepareTxParams(
     TX_TYPE.contractCall,
@@ -131,7 +175,7 @@ async function contractCallTx ({ callerId, gasPrice = MIN_GAS_PRICE }) {
 
 async function oracleRegisterTx ({
   accountId, queryFormat, responseFormat, queryFee, oracleTtl, abiVersion = ABI_VERSIONS.NO_ABI
-}) {
+}: TxOracleRegister): Promise<string> {
   const { fee, ttl, nonce } = await this.prepareTxParams(
     TX_TYPE.oracleRegister, { senderId: accountId, ...arguments[0], abiVersion }
   )
@@ -151,7 +195,8 @@ async function oracleRegisterTx ({
   }).encodedTx
 }
 
-async function oracleExtendTx ({ oracleId, callerId, oracleTtl }) {
+export async function oracleExtendTx (
+  { oracleId, callerId, oracleTtl }: TxOracleExtend): Promise<string> {
   const { fee, ttl, nonce } = await this.prepareTxParams(
     TX_TYPE.oracleExtend, { senderId: callerId, ...arguments[0] }
   )
@@ -161,7 +206,8 @@ async function oracleExtendTx ({ oracleId, callerId, oracleTtl }) {
   }).encodedTx
 }
 
-async function oraclePostQueryTx ({ oracleId, responseTtl, query, queryTtl, queryFee, senderId }) {
+export async function oraclePostQueryTx (
+  { oracleId, responseTtl, query, queryTtl, queryFee, senderId }: TxOracleQuery): Promise<EncodedData<'tx'>> {
   const { fee, ttl, nonce } = await this.prepareTxParams(
     TX_TYPE.oracleQuery, { senderId, ...arguments[0] }
   )
@@ -171,17 +217,19 @@ async function oraclePostQueryTx ({ oracleId, responseTtl, query, queryTtl, quer
   }).encodedTx
 }
 
-async function oracleRespondTx ({ oracleId, callerId, responseTtl, queryId, response }) {
+export async function oracleRespondTx (
+  { oracleId, callerId, responseTtl, queryId, response }: TxOracleRespond): Promise<string> {
   const { fee, ttl, nonce } = await this.prepareTxParams(
     TX_TYPE.oracleResponse, { senderId: callerId, ...arguments[0] }
   )
-  return TxObject({
+  return new TxObject<TxOracleRespond>({
     params: { oracleId, responseTtl, queryId, response, fee, ttl, nonce },
     type: TX_TYPE.oracleResponse
   }).encodedTx
 }
 
-async function channelCloseSoloTx ({ channelId, fromId, payload, poi }) {
+async function channelCloseSoloTx (
+  { channelId, fromId, payload, poi }: TxChannelCloseSolo): Promise<string> {
   const { fee, ttl, nonce } = await this.prepareTxParams(
     TX_TYPE.channelCloseSolo, { senderId: fromId, ...arguments[0], payload }
   )
@@ -197,7 +245,8 @@ async function channelCloseSoloTx ({ channelId, fromId, payload, poi }) {
   }, TX_TYPE.channelCloseSolo).tx
 }
 
-async function channelSlashTx ({ channelId, fromId, payload, poi }) {
+async function channelSlashTx (
+  { channelId, fromId, payload, poi }: TxChannelSlash): Promise<string> {
   const { fee, ttl, nonce } = await this.prepareTxParams(
     TX_TYPE.channelSlash, { senderId: fromId, ...arguments[0], payload }
   )
@@ -213,7 +262,13 @@ async function channelSlashTx ({ channelId, fromId, payload, poi }) {
   }, TX_TYPE.channelSlash).tx
 }
 
-async function channelSettleTx ({ channelId, fromId, initiatorAmountFinal, responderAmountFinal }) {
+async function channelSettleTx (
+  {
+    channelId,
+    fromId,
+    initiatorAmountFinal,
+    responderAmountFinal
+  }: TxChannelSettle): Promise<string> {
   const { fee, ttl, nonce } = await this.prepareTxParams(
     TX_TYPE.channelSettle, { senderId: fromId, ...arguments[0] }
   )
@@ -229,7 +284,8 @@ async function channelSettleTx ({ channelId, fromId, initiatorAmountFinal, respo
   }, TX_TYPE.channelSettle).tx
 }
 
-async function channelSnapshotSoloTx ({ channelId, fromId, payload }) {
+async function channelSnapshotSoloTx (
+  { channelId, fromId, payload }: TxChannelSnapshotSolo): Promise<string> {
   const { fee, ttl, nonce } = await this.prepareTxParams(
     TX_TYPE.channelSnapshotSolo, { senderId: fromId, ...arguments[0], payload }
   )
@@ -244,7 +300,7 @@ async function channelSnapshotSoloTx ({ channelId, fromId, payload }) {
   }, TX_TYPE.channelSnapshotSolo).tx
 }
 
-async function gaAttachTx ({ ownerId, gasPrice = MIN_GAS_PRICE }) {
+async function gaAttachTx ({ ownerId, gasPrice = MIN_GAS_PRICE }: TxGaAttach): Promise<object> {
   const ctVersion = this.getVmVersion(TX_TYPE.contractCreate, arguments[0])
   const { fee, ttl, nonce } = await this.prepareTxParams(
     TX_TYPE.gaAttach, { senderId: ownerId, ...arguments[0], ctVersion, gasPrice }
@@ -258,7 +314,7 @@ async function gaAttachTx ({ ownerId, gasPrice = MIN_GAS_PRICE }) {
   }
 }
 
-async function payingForTx ({ tx, payerId, ...args }) {
+async function payingForTx ({ tx, payerId, ...args }: TxPayingFor): Promise<string> {
   const params = { tx: unpackTx(tx), payerId }
   const { fee, nonce } = await this.prepareTxParams(TX_TYPE.payingFor, {
     ...params, ...args, senderId: payerId
@@ -269,37 +325,38 @@ async function payingForTx ({ tx, payerId, ...args }) {
 /**
  * Validated vm/abi version or get default based on transaction type and NODE version
  *
- * @param {string} txType Type of transaction
- * @param {object} vmAbi Object with vm and abi version fields
- * @return {object} Object with vm/abi version ({ vmVersion: number, abiVersion: number })
+ * @param txType Type of transaction
+ * @param vmAbi Object with vm and abi version fields
+ * @return
  */
-function getVmVersion (txType, { vmVersion, abiVersion } = {}) {
-  const { consensusProtocolVersion } = this.getNodeInfo()
+function getVmVersion (
+  txType: TxType,
+  { vmVersion, abiVersion }: Partial<VmVersion> = {}): VmVersion {
+  const { consensusProtocolVersion }:
+  {consensusProtocolVersion: keyof typeof PROTOCOL_VM_ABI} = this.getNodeInfo()
   const supportedProtocol = PROTOCOL_VM_ABI[consensusProtocolVersion]
-  if (!supportedProtocol) throw new UnsupportedProtocolError('Not supported consensus protocol version')
-  const protocolForTX = supportedProtocol[txType]
-  if (!protocolForTX) throw new UnknownTxError('Not supported tx type')
-
-  abiVersion = abiVersion || protocolForTX.abiVersion[0]
-  vmVersion = vmVersion || protocolForTX.vmVersion[0]
-  if (!protocolForTX.vmVersion.includes(vmVersion)) {
-    throw new UnsupportedVMversionError(`VM VERSION ${vmVersion} do not support by this node. Supported: [${protocolForTX.vmVersion}]`)
+  if (supportedProtocol == null) throw new UnsupportedProtocolError('Not supported consensus protocol version')
+  const protocolForTX = supportedProtocol[txType as keyof typeof supportedProtocol]
+  if (protocolForTX == null) throw new UnknownTxError('Not supported tx type')
+  if (abiVersion == null || abiVersion === 0) { abiVersion = protocolForTX.abiVersion[0] }
+  if (vmVersion == null || vmVersion === 0) { vmVersion = protocolForTX.vmVersion[0] }
+  if (protocolForTX.vmVersion != null && !protocolForTX.vmVersion.includes(vmVersion)) {
+    throw new UnsupportedVMversionError(`VM VERSION ${vmVersion} do not support by this node. Supported: [${protocolForTX.vmVersion.toString()}]`)
   }
   if (!protocolForTX.abiVersion.includes(abiVersion)) {
-    throw new UnsupportedABIversionError(`ABI VERSION ${abiVersion} do not support by this node. Supported: [${protocolForTX.abiVersion}]`)
+    throw new UnsupportedABIversionError(`ABI VERSION ${abiVersion} do not support by this node. Supported: [${protocolForTX.abiVersion.toString()}]`)
   }
-
   return { vmVersion, abiVersion }
 }
 
 /**
  * Compute the absolute ttl by adding the ttl to the current height of the chain
  *
- * @param {number} ttl
- * @param {boolean} relative ttl is absolute or relative(default: true(relative))
- * @return {number} Absolute Ttl
+ * @param ttl
+ * @param relative ttl is absolute or relative(default: true(relative))
+ * @return Absolute Ttl
  */
-async function calculateTtl (ttl = TX_TTL, relative = true) {
+async function calculateTtl (ttl = TX_TTL, relative = true): Promise<number> {
   if (ttl === 0) return 0
   if (ttl < 0) throw new ArgumentError('ttl', 'greater or equal to 0', ttl)
 
@@ -313,37 +370,59 @@ async function calculateTtl (ttl = TX_TTL, relative = true) {
 /**
  * Get the next nonce to be used for a transaction for an account
  *
- * @param {string} accountId
- * @param {number} nonce
- * @return {number} Next Nonce
+ * @param accountId
+ * @param nonce
+ * @return Next Nonce
  */
-async function getAccountNonce (accountId, nonce) {
-  if (nonce) return nonce
+async function getAccountNonce (accountId: string, nonce: number): Promise<number> {
+  if (nonce != null) return nonce
   const { nonce: accountNonce } = await this.api.getAccountByPubkey(accountId)
     .catch(() => ({ nonce: 0 }))
-  return accountNonce + 1
+  return parseInt(accountNonce) + 1
 }
 
 /**
  * Calculate fee, get absolute ttl (ttl + height), get account nonce
  *
- * @param {String} txType Type of transaction
- * @param {Object} params Object which contains all tx data
- * @return {Object} { ttl, nonce, fee } Object with account nonce, absolute ttl and transaction fee
+ * @param txType Type of transaction
+ * @param params Object which contains all tx data
+ * @return Object with account nonce, absolute ttl and transaction fee
  */
 async function prepareTxParams (
-  txType,
-  { senderId, nonce: n, ttl: t, fee: f, gasLimit, absoluteTtl, vsn, strategy }
-) {
-  n = n || (
+  txType: TxType,
+  {
+    senderId,
+    nonce: n,
+    ttl: t,
+    fee: f,
+    gasLimit,
+    absoluteTtl,
+    vsn,
+    strategy
+  }: TxBase & {
+    senderId?: string
+    ttl?: number
+    nonce?: number
+    fee?: number
+    gasLimit?: number
+    absoluteTtl?: number
+    strategy?: 'continuity' | 'max'
+  }
+): Promise<{
+    fee: number | string
+    ttl: number
+    nonce: number | string | BigNumber
+  }> {
+  n = n ?? (
     await this.api.getAccountNextNonce(senderId, { strategy }).catch(() => ({ nextNonce: 1 }))
   ).nextNonce
-  const ttl = await calculateTtl.call(this, t, !absoluteTtl)
+  const ttl = await calculateTtl.call(this, t, absoluteTtl == null)
   const fee = calculateFee(
     f,
     txType,
     { showWarning: this.showWarning, gasLimit, params: { ...arguments[1], nonce: n, ttl }, vsn }
   )
+  // @ts-expect-error remove me wen chain.js is migrated to ts
   return { fee, ttl, nonce: n }
 }
 
@@ -361,13 +440,13 @@ async function prepareTxParams (
  * @function
  * @alias module:@aeternity/aepp-sdk/es/tx/tx
  * @rtype Stamp
- * @param {Object} [options={}] - Initializer object
- * @param {String} options.url - Node url
- * @return {Object} Transaction instance
+ * @param] - Initializer object
+ * @param options.url - Node url
+ * @return Transaction instance
  * @example Transaction({url: 'https://testnet.aeternity.io/'})
  */
 const Transaction = Ae.compose(Tx, {
-  init ({ showWarning = false }) {
+  async init ({ showWarning = false }) {
     this.showWarning = showWarning
   },
   props: {
