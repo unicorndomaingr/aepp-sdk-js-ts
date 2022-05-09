@@ -300,7 +300,7 @@ describe('Contract instance', function () {
   it('fails on paying to not payable function', async () => {
     const amount = 100
     await expect(testContract.methods.intFn.send(1, { amount }))
-      .to.be.rejectedWith(NotPayableFunctionError, `You try to pay "${amount}" to function "intFn" which is not payable. Only payable function can accept coins`)
+      .to.be.rejectedWith(NotPayableFunctionError, `You try to pay "${amount}" to function "intFn" which is not payable. Only payable function can accept tokens`)
   })
 
   it('pays to payable function', async () => {
