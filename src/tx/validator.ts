@@ -2,9 +2,10 @@ import { verify, hash } from '../utils/crypto'
 import { encode, decode } from './builder/helpers'
 
 import BigNumber from 'bignumber.js'
-import { MIN_GAS_PRICE, PROTOCOL_VM_ABI, TX_TYPE } from './builder/schema'
-import { calculateFee, unpackTx } from './builder'
+import { EncodedTx, MIN_GAS_PRICE, PROTOCOL_VM_ABI, TxAccount, TxParams, TxPayingFor, TxSigned, TxType, TX_TYPE } from './builder/schema'
+import { calculateFee, TxHashUnpacked, unpackTx } from './builder'
 import { UnsupportedProtocolError } from '../utils/errors'
+import { EncodedData } from '../utils/encoder'
 
 /**
  * Transaction validator
@@ -13,8 +14,39 @@ import { UnsupportedProtocolError } from '../utils/errors'
  * @example import { verifyTransaction } from '@aeternity/aepp-sdk'
  */
 
-const validators = [
-  ({ encodedTx, signatures }, { account, node, parentTxTypes }) => {
+interface Account {
+  balance: string
+  id: EncodedData<'ak'>
+  kind: string
+  nonce: number | BigNumber | string
+  payable: boolean
+}
+
+interface ValidatorResult {
+  message: string
+  key: string
+  checkedKeys: string[]
+}
+
+type validator = (...args: any) => ValidatorResult[] | Promise<ValidatorResult[]>
+
+const validators: validator[] = [
+  ({
+    encodedTx,
+    signatures
+  }: {
+    encodedTx: EncodedTx
+    signatures: Buffer[]
+  },
+  {
+    account,
+    node,
+    parentTxTypes
+  }: {
+    account: Account
+    node: any
+    parentTxTypes: string[]
+  }) => {
     if ((encodedTx ?? signatures) === undefined) return []
     if (signatures.length !== 1) return [] // TODO: Support multisignature?
     const prefix = Buffer.from([
@@ -33,7 +65,21 @@ const validators = [
       checkedKeys: ['encodedTx', 'signatures']
     }]
   },
-  ({ encodedTx, tx }, { node, parentTxTypes, txType }) => {
+  ({
+    encodedTx,
+    tx
+  }: {
+    encodedTx: EncodedTx
+    tx: TxSigned
+  }, {
+    node,
+    parentTxTypes,
+    txType
+  }: {
+    node: any
+    parentTxTypes: string[]
+    txType: TxType
+  }) => {
     if ((encodedTx ?? tx) === undefined) return []
     return verifyTransaction(
       encode((encodedTx ?? tx).rlpEncoded, 'tx'),
@@ -41,19 +87,19 @@ const validators = [
       [...parentTxTypes, txType]
     )
   },
-  (tx, { txType }) => {
+  (tx: any, { txType }: {txType: TxType}) => {
     if (tx.fee === undefined) return []
     const minFee = calculateFee(0, txType, {
-      gasLimit: +tx.gasLimit || 0, params: tx, showWarning: false, vsn: tx.VSN
+      gasLimit: (parseInt(tx?.gasLimit)) ?? 0, params: tx, showWarning: false, vsn: tx.VSN
     })
     if (new BigNumber(minFee).lte(tx.fee)) return []
     return [{
-      message: `Fee ${tx.fee} is too low, minimum fee for this transaction is ${minFee}`,
+      message: `Fee ${tx.fee as string} is too low, minimum fee for this transaction is ${minFee}`,
       key: 'InsufficientFee',
       checkedKeys: ['fee']
     }]
   },
-  ({ ttl }, { height }) => {
+  ({ ttl }: {ttl: number}, { height }: {height: number}) => {
     if (ttl === undefined) return []
     ttl = +ttl
     if (ttl === 0 || ttl >= height) return []
@@ -63,10 +109,21 @@ const validators = [
       checkedKeys: ['ttl']
     }]
   },
-  ({ amount, fee, nameFee, tx }, { account, parentTxTypes, txType }) => {
+  ({ amount, fee, nameFee, tx }: {
+    amount: number
+    fee: number
+    nameFee: number
+    tx: TxHashUnpacked & {
+      tx: TxSigned
+    }
+  }, { account, parentTxTypes, txType }: {
+    account: TxAccount
+    parentTxTypes: string[]
+    txType: TxType
+  }) => {
     if ((amount ?? fee ?? nameFee) === undefined) return []
-    const cost = new BigNumber(fee).plus(nameFee || 0).plus(amount || 0)
-      .plus(txType === TX_TYPE.payingFor ? tx.tx.encodedTx.tx.fee : 0)
+    const cost = new BigNumber(fee).plus(nameFee ?? 0).plus(amount ?? 0)
+      .plus(txType === TX_TYPE.payingFor ? (tx.tx.encodedTx.tx as TxPayingFor).fee : 0)
       .minus(parentTxTypes.includes(TX_TYPE.payingFor) ? fee : 0)
     if (cost.lte(account.balance)) return []
     return [{
@@ -75,8 +132,11 @@ const validators = [
       checkedKeys: ['amount', 'fee', 'nameFee']
     }]
   },
-  ({ nonce }, { account, parentTxTypes }) => {
-    if (nonce === undefined || parentTxTypes.includes(TX_TYPE.gaMeta)) return []
+  ({ nonce }: {nonce: number}, { account, parentTxTypes }: {
+    account: TxAccount
+    parentTxTypes: string[]
+  }) => {
+    if (nonce == null || parentTxTypes.includes(TX_TYPE.gaMeta)) return []
     nonce = +nonce
     const validNonce = account.nonce + 1
     if (nonce === validNonce) return []
@@ -93,7 +153,7 @@ const validators = [
       checkedKeys: ['nonce']
     }]
   },
-  ({ gasPrice }) => {
+  ({ gasPrice }: {gasPrice: number}) => {
     if (gasPrice === undefined) return []
     if (gasPrice >= MIN_GAS_PRICE) return []
     return [{
@@ -103,14 +163,20 @@ const validators = [
     }]
   },
   ({ ctVersion, abiVersion }, { txType, node }) => {
-    const { consensusProtocolVersion } = node.getNodeInfo()
+    const { consensusProtocolVersion }: {consensusProtocolVersion: number } = node.getNodeInfo()
     const protocol = PROTOCOL_VM_ABI[consensusProtocolVersion]
-    if (!protocol) throw new UnsupportedProtocolError(`Unsupported protocol: ${consensusProtocolVersion}`)
+    if (protocol == null) throw new UnsupportedProtocolError(`Unsupported protocol: ${consensusProtocolVersion}`)
     // If not contract create tx
-    if (!ctVersion) ctVersion = { abiVersion }
+    if (ctVersion == null) ctVersion = { abiVersion }
     const txProtocol = protocol[txType]
-    if (!txProtocol) return []
-    if (Object.entries(ctVersion).some(([key, value]) => !txProtocol[key].includes(+value))) {
+    if (txProtocol == null) return []
+    if (Object.entries(ctVersion).some(
+      ([
+        key,
+        value
+      ]: [
+        key:keyof typeof txProtocol,
+        value:any]) => !txProtocol[key].includes(+value))) {
       return [{
         message: `ABI/VM version ${JSON.stringify(ctVersion)} is wrong, supported is: ${JSON.stringify(txProtocol)}`,
         key: 'VmAndAbiVersionMismatch',
@@ -119,10 +185,15 @@ const validators = [
     }
     return []
   },
-  async ({ contractId }, { txType, node }) => {
+  async ({ contractId }: {
+    contractId: string
+  }, { txType, node }: {
+    txType: TxType
+    node: any
+  }) => {
     if (TX_TYPE.contractCall !== txType) return []
     try {
-      const { active } = await node.api.getContract(contractId)
+      const { active }: {active: boolean} = await node.api.getContract(contractId)
       if (active) return []
       return [{
         message: `Contract ${contractId} is not active`,
@@ -130,7 +201,7 @@ const validators = [
         checkedKeys: ['contractId']
       }]
     } catch (error) {
-      if (!error.response?.parsedBody?.reason) throw error
+      if (error.response?.parsedBody?.reason != null) throw error
       return [{
         message: error.response.parsedBody.reason,
         key: 'ContractNotFound',
@@ -140,13 +211,13 @@ const validators = [
   }
 ]
 
-const getSenderAddress = tx => [
+const getSenderAddress = (tx: TxParams): EncodedData<'ak'> => [
   'senderId', 'accountId', 'ownerId', 'callerId',
   'oracleId', 'fromId', 'initiator', 'gaId', 'payerId'
 ]
-  .map(key => tx[key])
+  .map((key: keyof TxParams) => tx[key])
   .filter(a => a)
-  .map(a => a.replace(/^ok_/, 'ak_'))[0]
+  .map((a: string) => a.replace(/^ok_/, 'ak_') as EncodedData<'ak'>)[0]
 
 /**
  * Transaction Validator
@@ -161,13 +232,16 @@ const getSenderAddress = tx => [
  * @return {Promise<Object[]>} Array with verification errors
  * @example const errors = await verifyTransaction(transaction, node)
  */
-export default async function verifyTransaction (transaction, node, parentTxTypes = []) {
+export default async function verifyTransaction (
+  transaction: Buffer | EncodedData<'tx'>,
+  node: any,
+  parentTxTypes: string[] = []): Promise<ValidatorResult[]> {
   const { tx, txType } = unpackTx(transaction)
 
   const address = getSenderAddress(tx) ??
-    (txType === TX_TYPE.signed ? getSenderAddress(tx.encodedTx.tx) : null)
+    (txType === TX_TYPE.signed ? getSenderAddress((tx as TxSigned).encodedTx.tx) : null)
   const [account, { height }] = await Promise.all([
-    address && node.api.getAccountByPubkey(address).catch(() => ({
+    address != null && node.api.getAccountByPubkey(address).catch(() => ({
       id: address,
       balance: new BigNumber(0),
       nonce: 0
