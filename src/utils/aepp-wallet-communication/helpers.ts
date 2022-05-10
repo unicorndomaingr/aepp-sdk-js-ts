@@ -5,7 +5,14 @@ import { NoBrowserFoundError } from '../errors'
 // @ts-expect-error TODO remove when RPC migration is merged
 import RpcClient from './rpc/rpc-client'
 
-export const getBrowserAPI = (force = false): object => {
+interface Browser {
+  extension?: any
+  runtime?: any
+  chrome?: boolean
+  firefox?: boolean
+}
+
+export const getBrowserAPI = (force = false): Browser => {
   const { chrome, browser } = window
   // Chrome, Opera support
   if (typeof chrome !== 'undefined' && chrome === Object(chrome)) return chrome

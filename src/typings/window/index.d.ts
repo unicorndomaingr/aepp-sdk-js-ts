@@ -4,7 +4,13 @@ export {}
 
 declare global {
   interface Window {
-    chrome: object
-    browser: object
+    chrome: {
+      runtime?: any
+      chrome?: boolean
+    }
+    browser: {
+      runtime?: any
+      firefox?: boolean
+    }
   }
 }

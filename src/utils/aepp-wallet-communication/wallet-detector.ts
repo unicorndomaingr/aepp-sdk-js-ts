@@ -22,7 +22,6 @@
  * @module @aeternity/aepp-sdk/es/utils/aepp-wallet-communication/wallet-detector
  * @export WalletDetector
  */
-// @ts-expect-error TODO remove
 import BrowserWindowMessageConnection from './connection/browser-window-message'
 import { MESSAGE_DIRECTION, METHODS } from './schema'
 import { UnsupportedPlatformError } from '../errors'
@@ -45,7 +44,7 @@ export default class WalletDetector {
 
   constructor ({ connection }: { connection: WalletConnection }) {
     if (window != null) throw new UnsupportedPlatformError('Window object not found, you can run wallet detector only in browser')
-    this.connection = connection ?? BrowserWindowMessageConnection({ connectionInfo: { id: 'spy' } })
+    this.connection = connection ?? new BrowserWindowMessageConnection({ connectionInfo: { id: 'spy' } })
     this.wallets = {}
   }
 
@@ -61,7 +60,7 @@ export default class WalletDetector {
       method: string
       params: any },
     origin: string,
-    source: string) => {
+    source: Window) => {
       if (
         method == null || params == null ||
         method !== METHODS.readyToConnect || wallets[params.id] != null
@@ -73,7 +72,7 @@ export default class WalletDetector {
           // if detect extension wallet or page wallet
           const isExtension = this.type === 'extension'
           const origin = isExtension ? window.origin : this.origin
-          return BrowserWindowMessageConnection({
+          return new BrowserWindowMessageConnection({
             connectionInfo: this,
             sendDirection: isExtension ? MESSAGE_DIRECTION.to_waellet : undefined,
             receiveDirection: isExtension ? MESSAGE_DIRECTION.to_aepp : undefined,

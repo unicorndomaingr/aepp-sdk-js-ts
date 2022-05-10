@@ -1,6 +1,6 @@
 /*
  * ISC License (ISC)
- * Copyright (c) 2018 aeternity developers
+ * Copyright (c) 2022 aeternity developers
  *
  *  Permission to use, copy, modify, and/or distribute this software for any
  *  purpose with or without fee is hereby granted, provided that the above
@@ -23,8 +23,6 @@
  * import WalletConnection from '@aeternity/aepp-sdk/es/utils/aepp-wallet-communication/connection'
  */
 
-import { required } from '@stamp/required'
-
 /**
  * Basic Wallet Connection
  *
@@ -37,49 +35,41 @@ import { required } from '@stamp/required'
  * @param {Object} [options={}] - Initializer object
  * @return {Object} WalletConnection instance
  */
-export default required({
-  methods: {
-    connect: required,
-    disconnect: required,
-    sendMessage: required,
-    isConnected: required
-  }
-})
-
-/**
- * Connect
- * @function connect
- * @instance
- * @abstract
- * @rtype (onMessage: Function) => void
- * @param {Function} onMessage - Message handler
- * @return {void}
- */
-
-/**
- * Disconnect
- * @function disconnect
- * @instance
- * @abstract
- * @rtype () => void
- * @return {void}
- */
-
-/**
- * Send message
- * @function sendMessage
- * @instance
- * @abstract
- * @rtype (msg: Object) => void
- * @param {Object} msg - Message
- * @return {void}
- */
-
-/**
- * Check if connected
- * @function isConnected
- * @instance
- * @abstract
- * @rtype () => Boolean
- * @return {Boolean} Is connected
- */
+export default interface WalletConnection{
+  /**
+   * Connect
+   * @function connect
+   * @instance
+   * @abstract
+   * @rtype (onMessage: Function) => void
+   * @param onMessage - Message handler
+   */
+  connect: (onMessage: Function, onDisconnect: Function) => void
+  /**
+   * Disconnect
+   * @function disconnect
+   * @instance
+   * @abstract
+   * @rtype () => void
+   * @return {void}
+   */
+  disconnect: () => void
+  /**
+   * Send message
+   * @function sendMessage
+   * @instance
+   * @abstract
+   * @rtype (msg: Object) => void
+   * @param msg - Message
+   */
+  sendMessage: (msg: object) => void
+  /**
+   * Check if connected
+   * @function isConnected
+   * @instance
+   * @abstract
+   * @rtype () => Boolean
+   * @return Is connected
+   */
+  isConnected: () => boolean
+}
