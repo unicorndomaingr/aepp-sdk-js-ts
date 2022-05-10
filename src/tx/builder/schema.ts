@@ -214,7 +214,7 @@ export const PROTOCOL_VM_ABI: {
 }
 
 export const OBJECT_ID_TX_TYPE: {
-  [key: string]: string
+  [key: string]: TxType
 } = {
   [OBJECT_TAG_ACCOUNT]: TX_TYPE.account,
   [OBJECT_TAG_SIGNED_TRANSACTION]: TX_TYPE.signed,
@@ -420,18 +420,17 @@ const SPEND_TX = [
   TX_FIELD('payload', FIELD_TYPES.payload)
 ]
 
-export interface EncodedTx {
+export interface EncodedTx<T extends TxBase> {
   txType: typeof TX_TYPE[keyof typeof TX_TYPE]
   rlpEncoded: Buffer
   binary: Buffer[]
-  tx: TxParams
+  tx: T
   fee: BigNumber
 }
 export interface TxSigned extends TxBase {
-  signatures: string[]
+  signatures: Uint8Array[]
   rlpBinary: Buffer
-  encodedTx: EncodedTx
-  fee: BigNumber
+  encodedTx: EncodedTx<TxSigned>
 }
 const SIGNED_TX = [
   ...BASE_TX,
@@ -571,7 +570,7 @@ export interface TxGaMeta2 extends TxBase {
   gaId: string
   authData: string
   abiVersion: number
-  fee: number
+
   gasLimit: number
   gasPrice: number
   tx: Buffer
@@ -738,9 +737,7 @@ const ORACLE_QUERY_TX = [
 
 export interface TxOracleRespond extends TxBase {
   oracleId: string
-
   response: string
-
   responseTtl?: { type: string, value: number}
   queryId: string
   callerId?: string
@@ -1083,7 +1080,7 @@ const PROOF_OF_INCLUSION_TX = [
   TX_FIELD('oracles', FIELD_TYPES.mptrees)
 ]
 
-export interface TxStateTrees{
+export interface TxStateTrees extends TxBase{
   contracts: MPTree[]
   calls: MPTree[]
   channels: MPTree[]

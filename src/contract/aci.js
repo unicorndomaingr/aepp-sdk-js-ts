@@ -139,7 +139,7 @@ export default async function getContractInstance ({
   const sendAndProcess = async (tx, options) => {
     const txData = await this.send(tx, options)
     const result = {
-      hash: txData.hash, tx: TxObject({ tx: txData.rawTx }), txData, rawTx: txData.rawTx
+      hash: txData.hash, tx: new TxObject({ tx: txData.rawTx }), txData, rawTx: txData.rawTx
     }
     if (!txData.blockHeight) return result
     const { callInfo } = await this.api.getTransactionInfoByHash(txData.hash)
@@ -260,7 +260,7 @@ export default async function getContractInstance ({
 
       const { callObj, ...dryRunOther } = await this.txDryRun(tx, callerId, opt)
       await handleCallError(callObj, tx)
-      res = { ...dryRunOther, tx: TxObject({ tx }), result: callObj }
+      res = { ...dryRunOther, tx: new TxObject({ tx }), result: callObj }
     } else {
       const tx = await this.contractCallTx({
         ...opt,

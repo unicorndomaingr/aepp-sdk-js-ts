@@ -519,13 +519,13 @@ function buildFee (txType: TxType, { params, multiplier, vsn }:
  * @example calculateFee(null, 'spendTx', { gasLimit, params })
  */
 export function calculateFee (
-  fee: number = 0, txType: TxType, { gasLimit = 0, params, showWarning = true, vsn }: {
+  fee: number | BigNumber = 0, txType: TxType, { gasLimit = 0, params, showWarning = true, vsn }: {
     gasLimit?: number
     params?: any
     showWarning?: boolean
     vsn?: number
   } = {}
-): number | string {
+): number | string | BigNumber {
   if ((params == null) && showWarning) console.warn(`Can't build transaction fee, we will use DEFAULT_FEE(${DEFAULT_FEE})`)
 
   return fee > 0 ? fee : calculateMinFee(txType, { params, gasLimit, vsn })
@@ -596,9 +596,9 @@ export function buildRawTx (
  * @param schema Transaction schema
  * @return Object with transaction field's
  */
-export function unpackRawTx (
+export function unpackRawTx<Tx extends TxParams> (
   binary: Uint8Array | NestedUint8Array,
-  schema: TxField[]): TxParams {
+  schema: TxField[]): Tx {
   return schema
     .reduce<any>(
     (
@@ -641,7 +641,7 @@ export interface TxHash<Tx extends TxParams> {
   tx: EncodedData<'tx'>
   rlpEncoded: Buffer
   binary: Uint8Array | NestedUint8Array
-  txObject: TxParams
+  txObject: Tx
 }
 /**
  * Build transaction hash
@@ -658,11 +658,11 @@ export interface TxHash<Tx extends TxParams> {
  * @returns object.rlpEncoded rlp encoded transaction
  * @returns object.binary binary transaction
  */
-export function buildTx (
+export function buildTx<Tx extends TxParams> (
   params: any,
   type: string,
   { excludeKeys = [], prefix = 'tx', vsn = VSN, denomination = AE_AMOUNT_FORMATS.AETTOS } = {}
-): TxHash {
+): TxHash<Tx> {
   const [schema, tag] = getSchema({ type, vsn })
   const binary = buildRawTx(
     { ...params, VSN: vsn, tag },
@@ -673,13 +673,13 @@ export function buildTx (
   const rlpEncoded = Buffer.from(rlpEncode(binary))
   const tx: EncodedData<'tx'> = encode<'tx'>(rlpEncoded, prefix as 'tx')
 
-  return { tx, rlpEncoded, binary, txObject: unpackRawTx(binary, schema) }
+  return { tx, rlpEncoded, binary, txObject: unpackRawTx<Tx>(binary, schema) }
 }
 
-export interface TxHashUnpacked {
-  txType: string
-  tx: TxParams
-  rlpEncoded: Buffer | EncodedData<'tx'>
+export interface TxHashUnpacked<Tx extends TxParams> {
+  txType: TxType
+  tx: Tx
+  rlpEncoded: Uint8Array | EncodedData<'tx'>
   binary: Uint8Array | NestedUint8Array
 }
 /**
@@ -695,7 +695,7 @@ export interface TxHashUnpacked {
  * @returns object.rlpEncoded rlp encoded transaction
  * @returns object.binary binary transaction
  */
-export function unpackTx (encodedTx: EncodedData<'tx'> | Buffer, fromRlpBinary: boolean = false, prefix: EncodingType = 'tx'): TxHashUnpacked {
+export function unpackTx<Tx extends TxParams> (encodedTx: EncodedData<'tx'> | Uint8Array, fromRlpBinary: boolean = false, prefix: EncodingType = 'tx'): TxHashUnpacked<Tx> {
   const rlpEncoded = fromRlpBinary
     ? encodedTx
     : decode(encodedTx.toString() as EncodedData<'tx'>, prefix)

@@ -29,8 +29,7 @@ import { EncodedData } from './../utils/encoder'
 import Tx from '.'
 import { buildTx, calculateFee, unpackTx } from './builder'
 import { buildContractId } from './builder/helpers'
-// @ts-expect-error TODO: remove me
-import { TxObject } from './tx-object'
+import TxObject from './tx-object'
 import {
   ArgumentError,
   UnsupportedABIversionError,
@@ -78,7 +77,7 @@ async function spendTx ({ senderId, recipientId, payload = '' }: TxSpend): Promi
   const { ttl, nonce } = await this.prepareTxParams(
     TX_TYPE.spend, { senderId, ...arguments[0], payload }
   )
-  const res = TxObject({
+  const res = new TxObject({
     params: {
       ...arguments[0],
       recipientId,
@@ -96,7 +95,7 @@ async function namePreclaimTx ({ accountId }: TxNamePreClaim): Promise<string> {
   const { fee, ttl, nonce } = await this.prepareTxParams(
     TX_TYPE.namePreClaim, { senderId: accountId, ...arguments[0] }
   )
-  return TxObject({
+  return new TxObject({
     params: { ...arguments[0], nonce, ttl, fee },
     type: TX_TYPE.namePreClaim
   }).encodedTx
@@ -106,7 +105,7 @@ async function nameClaimTx ({ accountId, vsn = 2 }: TxNameClaim2): Promise<strin
   const { fee, ttl, nonce } = await this.prepareTxParams(
     TX_TYPE.nameClaim, { senderId: accountId, ...arguments[0], vsn }
   )
-  return TxObject({
+  return new TxObject({
     params: { ...arguments[0], nonce, ttl, fee, vsn },
     type: TX_TYPE.nameClaim
   }).encodedTx
@@ -116,7 +115,7 @@ async function nameTransferTx ({ accountId, recipientId }: TxNameTransfer): Prom
   const { fee, ttl, nonce } = await this.prepareTxParams(
     TX_TYPE.nameTransfer, { senderId: accountId, ...arguments[0] }
   )
-  return TxObject({
+  return new TxObject({
     params: { ...arguments[0], recipientId, nonce, ttl, fee },
     type: TX_TYPE.nameTransfer
   }).encodedTx
@@ -126,7 +125,7 @@ async function nameUpdateTx ({ accountId }: TxNameUpdate): Promise<string> {
   const { fee, ttl, nonce } = await this.prepareTxParams(
     TX_TYPE.nameUpdate, { senderId: accountId, ...arguments[0] }
   )
-  return TxObject({
+  return new TxObject({
     params: { ...arguments[0], nonce, ttl, fee },
     type: TX_TYPE.nameUpdate
   }).encodedTx
@@ -136,7 +135,7 @@ async function nameRevokeTx ({ accountId }: TxNameRevoke): Promise<string> {
   const { fee, ttl, nonce } = await this.prepareTxParams(
     TX_TYPE.nameRevoke, { senderId: accountId, ...arguments[0] }
   )
-  return TxObject({
+  return new TxObject({
     params: { ...arguments[0], nonce, ttl, fee },
     type: TX_TYPE.nameRevoke
   }).encodedTx
@@ -152,7 +151,7 @@ async function contractCreateTx (
     TX_TYPE.contractCreate, { senderId: ownerId, ...arguments[0], ctVersion, gasPrice }
   )
   return {
-    tx: TxObject({
+    tx: new TxObject({
       params: { ...arguments[0], nonce, ttl, fee, ctVersion, gasPrice },
       type: TX_TYPE.contractCreate
     }).encodedTx,
@@ -167,7 +166,7 @@ async function contractCallTx (
     TX_TYPE.contractCall,
     { senderId: callerId, ...arguments[0], gasPrice, abiVersion: ctVersion.abiVersion }
   )
-  return TxObject({
+  return new TxObject({
     params: { ...arguments[0], nonce, ttl, fee, abiVersion: ctVersion.abiVersion, gasPrice },
     type: TX_TYPE.contractCall
   }).encodedTx
@@ -179,7 +178,7 @@ async function oracleRegisterTx ({
   const { fee, ttl, nonce } = await this.prepareTxParams(
     TX_TYPE.oracleRegister, { senderId: accountId, ...arguments[0], abiVersion }
   )
-  return TxObject({
+  return new TxObject<TxOracleRegister>({
     params: {
       accountId,
       queryFee,
@@ -200,7 +199,7 @@ export async function oracleExtendTx (
   const { fee, ttl, nonce } = await this.prepareTxParams(
     TX_TYPE.oracleExtend, { senderId: callerId, ...arguments[0] }
   )
-  return TxObject({
+  return new TxObject<TxOracleExtend>({
     params: { oracleId, fee, oracleTtl, nonce, ttl },
     type: TX_TYPE.oracleExtend
   }).encodedTx
@@ -211,7 +210,7 @@ export async function oraclePostQueryTx (
   const { fee, ttl, nonce } = await this.prepareTxParams(
     TX_TYPE.oracleQuery, { senderId, ...arguments[0] }
   )
-  return TxObject({
+  return new TxObject({
     params: { oracleId, responseTtl, query, queryTtl, fee, queryFee, ttl, nonce, senderId },
     type: TX_TYPE.oracleQuery
   }).encodedTx
@@ -306,7 +305,7 @@ async function gaAttachTx ({ ownerId, gasPrice = MIN_GAS_PRICE }: TxGaAttach): P
     TX_TYPE.gaAttach, { senderId: ownerId, ...arguments[0], ctVersion, gasPrice }
   )
   return {
-    tx: TxObject({
+    tx: new TxObject({
       params: { ...arguments[0], nonce, ttl, fee, ctVersion, gasPrice },
       type: TX_TYPE.gaAttach
     }).encodedTx,

@@ -35,7 +35,7 @@ const validators: validator[] = [
     encodedTx,
     signatures
   }: {
-    encodedTx: EncodedTx
+    encodedTx: EncodedTx<TxParams>
     signatures: Buffer[]
   },
   {
@@ -69,7 +69,7 @@ const validators: validator[] = [
     encodedTx,
     tx
   }: {
-    encodedTx: EncodedTx
+    encodedTx: EncodedTx<TxParams>
     tx: TxSigned
   }, {
     node,
@@ -94,7 +94,7 @@ const validators: validator[] = [
     })
     if (new BigNumber(minFee).lte(tx.fee)) return []
     return [{
-      message: `Fee ${tx.fee as string} is too low, minimum fee for this transaction is ${minFee}`,
+      message: `Fee ${tx.fee as string} is too low, minimum fee for this transaction is ${minFee.toString()}`,
       key: 'InsufficientFee',
       checkedKeys: ['fee']
     }]
@@ -113,7 +113,7 @@ const validators: validator[] = [
     amount: number
     fee: number
     nameFee: number
-    tx: TxHashUnpacked & {
+    tx: TxHashUnpacked<any> & {
       tx: TxSigned
     }
   }, { account, parentTxTypes, txType }: {
@@ -217,7 +217,7 @@ const getSenderAddress = (tx: TxParams): EncodedData<'ak'> => [
 ]
   .map((key: keyof TxParams) => tx[key])
   .filter(a => a)
-  .map((a: string) => a.replace(/^ok_/, 'ak_') as EncodedData<'ak'>)[0]
+  .map((a) => a?.toString().replace(/^ok_/, 'ak_'))[0] as EncodedData<'ak'>
 
 /**
  * Transaction Validator
