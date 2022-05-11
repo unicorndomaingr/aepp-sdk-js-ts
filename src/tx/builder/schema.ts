@@ -439,8 +439,7 @@ const SIGNED_TX = [
 ]
 
 export interface TxNamePreClaim extends TxBase {
-  accountId: string
-  nonce: number
+  accountId?: string
   commitmentId: string
 }
 
@@ -495,8 +494,7 @@ const NAME_UPDATE_TX = [
 ]
 
 export interface TxNameTransfer extends TxBase {
-  accountId: string
-  nonce: number
+  accountId?: string
   nameId: string
   recipientId: string
 }
