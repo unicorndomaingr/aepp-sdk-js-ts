@@ -25,22 +25,17 @@
 import BrowserWindowMessageConnection from './connection/browser-window-message'
 import { MESSAGE_DIRECTION, METHODS } from './schema'
 import { UnsupportedPlatformError } from '../errors'
-// @ts-expect-error TODO remove
-import { WalletConnection } from '../aepp-wallet-communication/connection'
-
-type FixAny = any
+import WalletConnection from '../aepp-wallet-communication/connection'
 
 /**
  * WalletDetector
- * @function
  * @alias module:@aeternity/aepp-sdk/es/utils/aepp-wallet-communication/wallet-detector
- * @rtype Class
  * @param params - Initializer object
  * @returns WalletDetector
  */
 export default class WalletDetector {
   connection: WalletConnection
-  wallets: FixAny
+  wallets: any
 
   constructor ({ connection }: { connection: WalletConnection }) {
     if (window != null) throw new UnsupportedPlatformError('Window object not found, you can run wallet detector only in browser')
@@ -50,7 +45,6 @@ export default class WalletDetector {
 
   /**
    * Start scanning
-   * @function scan
    * @instance
    * @param onDetected Call-back function which trigger on new wallet
    */
@@ -89,7 +83,6 @@ export default class WalletDetector {
 
   /**
   * Stop scanning
-  * @function stopScan
   * @instance
   */
   stopScan (): void {

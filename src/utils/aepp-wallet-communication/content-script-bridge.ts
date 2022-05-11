@@ -1,6 +1,6 @@
 /*
  * ISC License (ISC)
- * Copyright (c) 2018 aeternity developers
+ * Copyright (c) 2022 aeternity developers
  *
  *  Permission to use, copy, modify, and/or distribute this software for any
  *  purpose with or without fee is hereby granted, provided that the above
@@ -25,8 +25,23 @@
  * from '@aeternity/aepp-sdk/es/utils/wallet-communication/content-script-bridge
  */
 import { UnsupportedPlatformError, MissingParamError } from '../errors'
+import BrowserRuntimeConnection from './connection/browser-runtime'
+import BrowserWindowMessageConnection from './connection/browser-window-message'
 
-type FixAny = any
+// TODO remove and import from RPC when RPC migration is merged
+interface Message {
+  jsonrpc: string
+  id: number
+  method: string
+  version: number
+  params?: any
+  result?: any
+  error?: {
+    code: number
+    data?: any
+    message: string
+  }
+}
 
 /**
  * ContentScriptBridge
@@ -34,22 +49,22 @@ type FixAny = any
  * page through content script
  * Using Runtime(Extension) and WindowPostMessage(Web-Page) connections
  * @alias module:@aeternity/aepp-sdk/es/utils/aepp-wallet-communication/content-script-bridge
- * @param {Object} params - Initializer object
- * @param {Object} params.pageConnection - Page connection object
+ * @param params - Initializer object
+ * @param params.pageConnection - Page connection object
  * (@link module:@aeternity/aepp-sdk/es/utils/aepp-wallet-communication/connection/
  * browser-window-message)
- * @param {Object} params.extConnection - Extension connection object
+ * @param params.extConnection - Extension connection object
  * (@link module:@aeternity/aepp-sdk/es/utils/aepp-wallet-communication/connection/browser-runtime)
- * @return {Object}
+ * @return ContentScriptBridge object
  */
 export default class ContentScriptBridge {
   allowCrossOrigin: boolean
-  pageConnection: FixAny
-  extConnection: FixAny
+  pageConnection: BrowserWindowMessageConnection
+  extConnection: BrowserRuntimeConnection
 
   constructor ({ pageConnection, extConnection, allowCrossOrigin = false }: {
-    pageConnection: FixAny
-    extConnection: FixAny
+    pageConnection: BrowserWindowMessageConnection
+    extConnection: BrowserRuntimeConnection
     allowCrossOrigin: boolean }) {
     if (window == null) throw new UnsupportedPlatformError('Window object not found, you can run bridge only in browser')
     if (pageConnection == null) throw new MissingParamError('pageConnection required')
@@ -61,17 +76,16 @@ export default class ContentScriptBridge {
 
   /**
    * Start message proxy
-   * @function run
    * @instance
    */
   run (): void {
     const allowCrossOrigin = this.allowCrossOrigin
     // Connect to extension using runtime
-    this.extConnection.connect((msg: FixAny) => {
+    this.extConnection.connect((msg: any) => {
       this.pageConnection.sendMessage(msg)
     })
     // Connect to page using window.postMessage
-    this.pageConnection.connect((msg: FixAny, origin: string, source: FixAny) => {
+    this.pageConnection.connect((msg: Message, origin: string, source: any) => {
       if (!allowCrossOrigin && source !== window) return
       this.extConnection.sendMessage(msg)
     })
@@ -79,7 +93,6 @@ export default class ContentScriptBridge {
 
   /**
    * Stop message proxy
-   * @function stop
    * @instance
    */
   stop (): void {

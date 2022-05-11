@@ -1,6 +1,6 @@
 /*
  * ISC License (ISC)
- * Copyright (c) 2018 aeternity developers
+ * Copyright (c) 2022 aeternity developers
  *
  *  Permission to use, copy, modify, and/or distribute this software for any
  *  purpose with or without fee is hereby granted, provided that the above
@@ -36,8 +36,6 @@ import {
   MessageDirectionError
 } from '../../errors'
 
-type FixAny = any
-
 const getTarget = (): Window | undefined => {
   const isExtensionContext = typeof getBrowserAPI(true).extension === 'object'
   const isWeb = window?.location?.protocol.startsWith('http')
@@ -51,10 +49,8 @@ const getTarget = (): Window | undefined => {
 
 /**
  * BrowserWindowMessageConnection
- * @function
  * @alias module:@aeternity/aepp-sdk/es/utils/aepp-wallet-communication\
  * /connection/browser-window-message
- * @rtype Stamp
  * @param {Object} [params={}] - Initializer object
  * @param {Object} [params.target=window.parent] - Target window for message
  * @param {Object} [params.self=window] - Host window for message
@@ -70,15 +66,20 @@ const getTarget = (): Window | undefined => {
  * @return {Object}
  */
 export default class BrowserWindowMessageConnection implements WalletConnection {
-  connectionInfo: object
+  connectionInfo: {
+    id?: string
+    description?: string
+    origin?: string
+  }
+
   origin?: string
   debug: boolean
   forceOrigin: boolean
   sendDirection?: string
   receiveDirection: string
-  subscribeFn: (listener: (this: Window, ev: MessageEvent<any>) => any) => FixAny
-  unsubscribeFn: (listener: (this: Window, ev: MessageEvent<any>) => any) => FixAny
-  postFn: (msg: FixAny) => FixAny
+  subscribeFn: (listener: (this: Window, ev: MessageEvent<any>) => any) => any
+  unsubscribeFn: (listener: (this: Window, ev: MessageEvent<any>) => any) => any
+  postFn: (msg: any) => any
   listener: ((this: Window, ev: MessageEvent<any>) => any) | null
 
   constructor ({
@@ -91,7 +92,11 @@ export default class BrowserWindowMessageConnection implements WalletConnection 
     debug = false,
     forceOrigin = false
   }: {
-    connectionInfo?: object
+    connectionInfo?: {
+      id?: string
+      description?: string
+      origin?: string
+    }
     target?: Window
     self?: Window
     origin?: string
@@ -118,9 +123,7 @@ export default class BrowserWindowMessageConnection implements WalletConnection 
 
   /**
  * Check if connected
- * @function isConnected
  * @instance
- * @rtype () => Boolean
  * @returns is connected
  */
   isConnected (): boolean {
@@ -129,9 +132,7 @@ export default class BrowserWindowMessageConnection implements WalletConnection 
 
   /**
  * Connect
- * @function connect
  * @instance
- * @rtype (onMessage: Function) => void
  * @param onMessage - Message handler
  */
   connect (onMessage: Function): void {
@@ -141,7 +142,7 @@ export default class BrowserWindowMessageConnection implements WalletConnection 
     const forceOrigin = this.forceOrigin
     if (this.listener != null) throw new AlreadyConnectedError('You already connected')
 
-    this.listener = (msg: FixAny) => {
+    this.listener = (msg: any) => {
       if (msg == null || typeof msg.data !== 'object') return
       if (!forceOrigin && origin != null && origin !== msg.origin) return
       if (debug) console.log('Receive message: ', msg)
@@ -157,9 +158,7 @@ export default class BrowserWindowMessageConnection implements WalletConnection 
 
   /**
  * Disconnect
- * @function disconnect
  * @instance
- * @rtype () => void
  */
   disconnect (): void {
     if (this.listener == null) throw new NoWalletConnectedError('You dont have connection. Please connect before')
@@ -169,12 +168,10 @@ export default class BrowserWindowMessageConnection implements WalletConnection 
 
   /**
  * Send message
- * @function sendMessage
  * @instance
- * @rtype (msg: Object) => void
  * @param msg - Message
  */
-  sendMessage (msg: FixAny): void {
+  sendMessage (msg: any): void {
     const message = this.sendDirection != null ? { type: this.sendDirection, data: msg } : msg
     if (this.debug) console.log('Send message: ', message)
     this.postFn(message)

@@ -1,6 +1,6 @@
 /*
  * ISC License (ISC)
- * Copyright (c) 2018 aeternity developers
+ * Copyright (c) 2022 aeternity developers
  *
  *  Permission to use, copy, modify, and/or distribute this software for any
  *  purpose with or without fee is hereby granted, provided that the above
@@ -68,20 +68,27 @@ interface Port {
 /**
  * BrowserRuntimeConnection
  * Handle browser runtime communication
- * @function
  * @alias module:@aeternity/aepp-sdk/es/utils/aepp-wallet-communication/connection/browser-runtime
- * @rtype Class
  * @param params - Initializer object
  * @return BrowserRuntimeConnection
  */
 export default class BrowserRuntimeConnection implements WalletConnection {
   debug: boolean
-  connectionInfo: object
   port: Port
+  connectionInfo: {
+    id?: string
+    description?: string
+    origin?: string
+  }
 
   handler: (msg: Message, source: string) => void
+
   constructor ({ connectionInfo = {}, port, debug = false }: {
-    connectionInfo: any
+    connectionInfo: {
+      id?: string
+      description?: string
+      origin?: string
+    }
     port: Port
     debug: boolean
   }) {
@@ -93,9 +100,7 @@ export default class BrowserRuntimeConnection implements WalletConnection {
 
   /**
    * Disconnect
-   * @function disconnect
    * @instance
-   * @rtype () => void
    */
   disconnect (): void {
     try {
@@ -107,13 +112,11 @@ export default class BrowserRuntimeConnection implements WalletConnection {
 
   /**
    * Connect
-   * @function connect
    * @instance
-   * @rtype (onMessage: Function, onDisconnect: Function) => void
    * @param onMessage - Message handler
    * @param onDisconnect - trigger when runtime connection in closed
    */
-  connect (onMessage: Function, onDisconnect: Function): void {
+  connect (onMessage: Function, onDisconnect?: Function): void {
     if (this.isConnected()) throw new AlreadyConnectedError('You already connected')
     this.handler = (msg, source) => {
       if (this.debug) console.log('Receive message: ', msg)
@@ -128,9 +131,7 @@ export default class BrowserRuntimeConnection implements WalletConnection {
 
   /**
    * Send message
-   * @function sendMessage
    * @instance
-   * @rtype (msg: Object) => void
    * @param msg - Message
    */
   sendMessage (msg: Message): void {
@@ -141,9 +142,7 @@ export default class BrowserRuntimeConnection implements WalletConnection {
 
   /**
    * Check if connected
-   * @function isConnected
    * @instance
-   * @rtype () => Boolean
    * @return {Boolean} Is connected
    */
   isConnected (): boolean {

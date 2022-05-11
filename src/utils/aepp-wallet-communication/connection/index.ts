@@ -29,46 +29,37 @@
  * This stamp include interface for wallet connection functionality.
  * Attempting to create instances from the Stamp without overwriting all
  * abstract methods using composition will result in an exception.
- * @function
  * @alias module:@aeternity/aepp-sdk/es/utils/aepp-wallet-communication/connection
- * @rtype Stamp
  * @param {Object} [options={}] - Initializer object
  * @return {Object} WalletConnection instance
  */
 export default interface WalletConnection{
   /**
    * Connect
-   * @function connect
    * @instance
    * @abstract
-   * @rtype (onMessage: Function) => void
    * @param onMessage - Message handler
+   * @param onDisconnect - trigger when runtime connection in closed
    */
-  connect: (onMessage: Function, onDisconnect: Function) => void
+  connect: (onMessage: Function, onDisconnect?: Function) => void
   /**
    * Disconnect
-   * @function disconnect
    * @instance
    * @abstract
-   * @rtype () => void
    * @return {void}
    */
   disconnect: () => void
   /**
    * Send message
-   * @function sendMessage
    * @instance
    * @abstract
-   * @rtype (msg: Object) => void
    * @param msg - Message
    */
   sendMessage: (msg: object) => void
   /**
    * Check if connected
-   * @function isConnected
    * @instance
    * @abstract
-   * @rtype () => Boolean
    * @return Is connected
    */
   isConnected: () => boolean
