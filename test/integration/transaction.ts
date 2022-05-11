@@ -1,3 +1,4 @@
+import { EncodedData } from './../../src/utils/encoder'
 /*
  * ISC License (ISC)
  * Copyright (c) 2022 aeternity developers
@@ -56,7 +57,7 @@ const commitmentId = commitmentHash(name, nameSalt)
 describe('Transaction', function () {
   let aeSdk
   const address = publicKey
-  const oracleId = encode(decode(address, 'ak'), 'ok')
+  const oracleId = encode(decode(address as EncodedData<'ak'>, 'ak'), 'ok')
   let contract
 
   before(async () => {
@@ -74,8 +75,8 @@ describe('Transaction', function () {
     spendAe.should.be.equal(spendAettos)
   })
 
-  const contractId = 'ct_TCQVoset7Y4qEyV5tgEAJAqa2Foz8J1EXqoGpq3fB6dWH5roe';
-  [[
+  const contractId = 'ct_TCQVoset7Y4qEyV5tgEAJAqa2Foz8J1EXqoGpq3fB6dWH5roe'
+  const transactions: Array<[string, string, () => Promise<string>]> = [[
     'spend',
     'tx_+F0MAaEB4TK48d23oE5jt/qWR5pUu8UlpTGn8bwM5JISGQMGf7ChAeEyuPHdt6BOY7f6lkeaVLvFJaUxp/G8DOSSEhkDBn+wiBvBbWdOyAAAhg9e1n8oAAABhHRlc3QLK3OW',
     () => aeSdk.spendTx({
@@ -156,14 +157,16 @@ describe('Transaction', function () {
       queryId: oracleQueryId(address, nonce, oracleId),
       response: queryResponse
     })
-  ]].forEach(([name, expected, getter]) =>
-    it(`build of ${name} transaction`, async () => {
+  ]]
+
+  transactions.forEach(([name, expected, getter]) =>
+    it(`build of ${name.toString()} transaction`, async () => {
       expect(await getter()).to.be.equal(expected)
     }))
 
   it('Get next account nonce', async () => {
     const { nonce: accountNonce } = await aeSdk.api.getAccountByPubkey(address)
-    expect(await aeSdk.getAccountNonce(address)).to.be.equal(accountNonce + 1)
+    expect(await aeSdk.getAccountNonce(address)).to.be.equal(parseInt(accountNonce) + 1)
     expect(await aeSdk.getAccountNonce(address, 1)).to.be.equal(1)
   })
 

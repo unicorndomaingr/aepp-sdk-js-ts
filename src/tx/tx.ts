@@ -1,4 +1,3 @@
-import { BigNumber } from 'bignumber.js'
 /*
  * ISC License (ISC)
  * Copyright (c) 2022 aeternity developers
@@ -65,6 +64,7 @@ import {
   TxParams,
   TxType
 } from './builder/schema'
+import { BigNumber } from 'bignumber.js'
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import stampit from '@stamp/it'
 
@@ -77,7 +77,7 @@ async function spendTx ({ senderId, recipientId, payload = '' }: TxSpend): Promi
   const { ttl, nonce } = await this.prepareTxParams(
     TX_TYPE.spend, { senderId, ...arguments[0], payload }
   )
-  const res = new TxObject({
+  return new TxObject({
     params: {
       ...arguments[0],
       recipientId,
@@ -88,7 +88,6 @@ async function spendTx ({ senderId, recipientId, payload = '' }: TxSpend): Promi
     },
     type: TX_TYPE.spend
   }).encodedTx
-  return res
 }
 
 async function namePreclaimTx ({ accountId }: TxNamePreClaim): Promise<string> {
@@ -326,7 +325,7 @@ async function payingForTx ({ tx, payerId, ...args }: TxPayingFor): Promise<stri
  *
  * @param txType Type of transaction
  * @param vmAbi Object with vm and abi version fields
- * @return
+ *  @return Object with vm/abi version
  */
 function getVmVersion (
   txType: TxType,
@@ -439,7 +438,7 @@ async function prepareTxParams (
  * @function
  * @alias module:@aeternity/aepp-sdk/es/tx/tx
  * @rtype Stamp
- * @param] - Initializer object
+ * @param options - Initializer object
  * @param options.url - Node url
  * @return Transaction instance
  * @example Transaction({url: 'https://testnet.aeternity.io/'})

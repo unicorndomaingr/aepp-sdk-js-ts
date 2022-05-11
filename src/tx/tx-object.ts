@@ -6,12 +6,12 @@ import { TxParams, TxType, TX_TYPE } from './builder/schema'
  * @export TxObject
  * @example import TxObject from '@aeternity/aepp-sdk/es/tx/tx-object'
  */
-// import stampit from '@stamp/it'
 import { buildTx, calculateFee, unpackTx } from './builder'
 import { encode } from './builder/helpers'
 import { isHex } from '../utils/string'
 import { InvalidTxError, TypeError, InvalidSignatureError } from '../utils/errors'
 import { NestedUint8Array } from 'rlp'
+import BigNumber from 'bignumber.js'
 
 /**
  * Transaction Validator Class
@@ -64,12 +64,12 @@ class TxObject<Tx extends TxParams> {
   }
 
   /**
- * Build transaction from object
- * @alias module:@aeternity/aepp-sdk/es/tx/tx-object
- * @param type Transaction type
- * @param params Transaction params
- * @param options Options
- */
+   * Build transaction from object
+   * @alias module:@aeternity/aepp-sdk/es/tx/tx-object
+   * @param type Transaction type
+   * @param params Transaction params
+   * @param options Options
+  */
   buildTransaction = (
     type: TxType,
     params: TxParams,
@@ -90,10 +90,10 @@ class TxObject<Tx extends TxParams> {
   }
 
   /**
- * Unpack transaction from RLP encoded binary or base64c string
- * @alias module:@aeternity/aepp-sdk/es/tx/tx-object
- * @param tx RLP encoded binary or base64c(rlpBinary) string
- */
+   * Unpack transaction from RLP encoded binary or base64c string
+   * @alias module:@aeternity/aepp-sdk/es/tx/tx-object
+   * @param tx RLP encoded binary or base64c(rlpBinary) string
+  */
   unpackTransaction = (tx: Uint8Array | EncodedData<'tx'>): {
     encodedTx: EncodedData<'tx'>
     type: TxType
@@ -111,14 +111,14 @@ class TxObject<Tx extends TxParams> {
   }
 
   /**
- * Helper which build or unpack transaction base on constructor arguments
- * Need to provide one of arguments: [tx] -> unpack flow or [params, type] -> build flow
- * @alias module:@aeternity/aepp-sdk/es/tx/tx-object
- * @param _.tx Transaction rlp binary or vase64c string
- * @param _.params Transaction params
- * @param _.type Transaction type
- * @param _.options Options
- */
+   * Helper which build or unpack transaction base on constructor arguments
+   * Need to provide one of arguments: [tx] -> unpack flow or [params, type] -> build flow
+   * @alias module:@aeternity/aepp-sdk/es/tx/tx-object
+   * @param _.tx Transaction rlp binary or vase64c string
+   * @param _.params Transaction params
+   * @param _.type Transaction type
+   * @param _.options Options
+  */
   initTransaction = ({ tx, params, type, options = {} }: {
     tx?: Uint8Array | EncodedData<'tx'>
     params?: Tx
@@ -139,12 +139,12 @@ class TxObject<Tx extends TxParams> {
   }
 
   /**
-     * Rebuild transaction with new params and recalculate fee
-     * @alias module:@aeternity/aepp-sdk/es/tx/tx-object
-     * @param props Transaction properties for update
-     * @param options
-     * @return {TxObject}
-     */
+   * Rebuild transaction with new params and recalculate fee
+   * @alias module:@aeternity/aepp-sdk/es/tx/tx-object
+   * @param props Transaction properties for update
+   * @param options
+   * @return {TxObject}
+  */
   setProp (props: any, options?: Tx): TxObject<Tx> {
     if (typeof props !== 'object') throw new TypeError('Props should be an object')
     this.isSigned = false
@@ -159,20 +159,19 @@ class TxObject<Tx extends TxParams> {
   }
 
   /**
-     * Get signatures
-     * @alias module:@aeternity/aepp-sdk/es/tx/tx-object
-     * @return Array of signatures
-     */
+   * Get signatures
+   * @alias module:@aeternity/aepp-sdk/es/tx/tx-object
+   * @return Array of signatures
+  */
   getSignatures (): Uint8Array[] {
     return this.signatures
   }
 
   /**
-     * Add signature
-     * @alias module:@aeternity/aepp-sdk/es/tx/tx-object
-     * @param  signature Signature to add ( Can be: Buffer | Uint8Array | HexString )
-     * @return {void}
-     */
+   * Add signature
+   * @alias module:@aeternity/aepp-sdk/es/tx/tx-object
+   * @param  signature Signature to add ( Can be: Buffer | Uint8Array | HexString )
+  */
   addSignature (signature: Uint8Array | string): void {
     if (typeof signature === 'string' && isHex(signature)) signature = Buffer.from(signature, 'hex') as Uint8Array
     else if (!Buffer.isBuffer(signature) && !(signature instanceof Uint8Array)) throw new InvalidSignatureError('Invalid signature, signature must be of type Buffer or Uint8Array')
@@ -195,31 +194,30 @@ class TxObject<Tx extends TxParams> {
   }
 
   /**
-     * Calculate fee
-     * @alias module:@aeternity/aepp-sdk/es/tx/tx-object
-     * @param  props
-     * @return {String} fee
-     */
-  calculateMinFee (props = {}): number | string {
+   * Calculate fee
+   * @alias module:@aeternity/aepp-sdk/es/tx/tx-object
+   * @param props
+   * @return fee
+  */
+  calculateMinFee (props = {}): number | string | BigNumber {
     const params = { ...this.params, ...props }
-    // @ts-expect-error
     return calculateFee(0, this.type, { gasLimit: params.gasLimit, params, vsn: params.vsn })
   }
 
   /**
-     * Create txObject from base64c RLP encoded transaction string with 'tx_' prefix
-     * @alias module:@aeternity/aepp-sdk/es/tx/tx-object
-     * @param  tx Transaction string (tx_23fsdgsdfg...)
-     */
+   * Create txObject from base64c RLP encoded transaction string with 'tx_' prefix
+   * @alias module:@aeternity/aepp-sdk/es/tx/tx-object
+   * @param  tx Transaction string (tx_23fsdgsdfg...)
+  */
   static fromString <Tx extends TxParams>(tx: EncodedData<'tx'>): TxObject<Tx> {
     return new TxObject<Tx>({ tx })
   }
 
   /**
-    * Create txObject from transaction RLP binary
-    * @alias module:@aeternity/aepp-sdk/es/tx/tx-object
-    * @param tx Transaction RLP binary
-    */
+   * Create txObject from transaction RLP binary
+   * @alias module:@aeternity/aepp-sdk/es/tx/tx-object
+   * @param tx Transaction RLP binary
+  */
   static fromRlp <Tx extends TxParams>(tx: Buffer): TxObject<Tx> {
     return new TxObject<Tx>({ tx })
   }

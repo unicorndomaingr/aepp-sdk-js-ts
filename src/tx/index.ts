@@ -1,6 +1,6 @@
 /*
  * ISC License (ISC)
- * Copyright (c) 2018 aeternity developers
+ * Copyright (c) 2022 aeternity developers
  *
  *  Permission to use, copy, modify, and/or distribute this software for any
  *  purpose with or without fee is hereby granted, provided that the above
@@ -36,12 +36,10 @@ import {
   TxOracleQuery,
   TxOracleRegister,
   TxOracleRespond,
-  TxPayingFor,
   TxSpend
 } from './builder/schema'
-import { EncodedData } from './../utils/encoder'
 
-export abstract class Tx {
+abstract class Tx {
   /**
  * Create a `spend_tx` transaction
  * @param  options - The object to extract properties from
@@ -57,31 +55,31 @@ export abstract class Tx {
   abstract namePreclaimTx: (options: TxNamePreClaim) => Promise<string>
 
   /**
- * Create a `name_claim_tx` transaction
- * @param  options - The object to extract properties from
- * @return name_claim_tx` transaction
- */
+   * Create a `name_claim_tx` transaction
+   * @param  options - The object to extract properties from
+   * @return `name_claim_tx` transaction
+  */
   abstract nameClaimTx: (options: TxNameClaim2) => Promise<string>
 
   /**
- * Create a `name_transfer_tx` transaction
- * @param options - The object to extract properties from
- * @return`name_transfer_tx` transaction
- */
+   * Create a `name_transfer_tx` transaction
+   * @param options - The object to extract properties from
+   * @return`name_transfer_tx` transaction
+  */
   abstract nameTransferTx: (options: TxNameTransfer) => Promise<string>
 
   /**
- * Create a `name_update_tx` transaction
- * @param options - The object to extract properties from
- * @return`name_update_tx` transaction
- */
+   * Create a `name_update_tx` transaction
+   * @param options - The object to extract properties from
+   * @return`name_update_tx` transaction
+  */
   abstract nameUpdateTx: (options: TxNameUpdate) => Promise<string>
 
   /**
- * Create a `name_revoke_tx` transaction
- * @param options - The object to extract properties from
- * @return`name_revoke_tx` transaction
- */
+   * Create a `name_revoke_tx` transaction
+   * @param options - The object to extract properties from
+   * @return`name_revoke_tx` transaction
+  */
   abstract nameRevokeTx: (options: TxNameRevoke) => Promise<string>
 
   /**
@@ -95,24 +93,24 @@ export abstract class Tx {
   }>
 
   /**
- * Create a `contract_call_tx` transaction
- * @param options - The object to extract properties from
- * @return `contract_call_tx` transaction
- */
+   * Create a `contract_call_tx` transaction
+   * @param options - The object to extract properties from
+   * @return `contract_call_tx` transaction
+  */
   abstract contractCallTx: (options: TxContractCall) => Promise<string>
 
   /**
- * Create a `oracle_register_tx` transaction
- * @param options - The object to extract properties from
- * @return `oracle_register_tx` transaction
- */
+   * Create a `oracle_register_tx` transaction
+   * @param options - The object to extract properties from
+   * @return `oracle_register_tx` transaction
+  */
   abstract oracleRegisterTx: (options: TxOracleRegister) => Promise<string>
 
   /**
- * Create a `oracle_extend_tx` transaction
- * @param options - The object to extract properties from
- * @return `oracle_extend_tx` transaction
- */
+   * Create a `oracle_extend_tx` transaction
+   * @param options - The object to extract properties from
+   * @return `oracle_extend_tx` transaction
+  */
   abstract oracleExtendTx: (options: TxOracleExtend) => Promise<string>
 
   /**
@@ -123,10 +121,10 @@ export abstract class Tx {
   abstract oraclePostQuery: (options: TxOracleQuery) => Promise<string>
 
   /**
- * Create a `oracle_respond_tx` transaction
- * @param options - The object to extract properties from
- * @return `oracle_respond_tx` transaction
- */
+   * Create a `oracle_respond_tx` transaction
+   * @param options - The object to extract properties from
+   * @return `oracle_respond_tx` transaction
+  */
   abstract oracleRespondTx: (options: TxOracleRespond) => Promise<string>
 
   /**

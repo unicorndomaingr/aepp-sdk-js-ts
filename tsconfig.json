@@ -22,5 +22,5 @@
     "allowSyntheticDefaultImports": true,
     "typeRoots": ["./node_modules/@types", "./src/typings"]
   },
-  "include": ["src/**/*", "test/integration/*"]
+  "include": ["src/**/*", "ts/integration/**/*"]
 }

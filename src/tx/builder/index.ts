@@ -497,10 +497,11 @@ function buildFee (txType: TxType, { params, multiplier, vsn }:
 {params: any, multiplier: BigNumber, vsn?: number}): BigNumber {
   const { rlpEncoded: txWithOutFee } = buildTx({ ...params }, txType, { vsn })
   const txSize = txWithOutFee.length
+  const txTypes: [TxType, TxType] = [TX_TYPE.gaMeta, TX_TYPE.payingFor]
   return TX_FEE_BASE_GAS(txType)
     .plus(TX_FEE_OTHER_GAS(txType, txSize, {
       relativeTtl: getOracleRelativeTtl(params, txType),
-      innerTxSize: ([TX_TYPE.gaMeta, TX_TYPE.payingFor] as Array<typeof txType>).includes(txType)
+      innerTxSize: txTypes.includes(txType)
         ? params.tx.tx.encodedTx.rlpEncoded.length
         : 0
     }))

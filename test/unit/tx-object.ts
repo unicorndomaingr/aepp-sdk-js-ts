@@ -20,7 +20,6 @@ import { describe, it } from 'mocha'
 import { expect } from 'chai'
 import TxObject from '../../src/tx/tx-object'
 import { generateKeyPair } from '../../src/utils/crypto'
-// @ts-expect-error todo: remove me
 import MemoryAccount from '../../src/account/memory'
 import {
   TypeError
@@ -46,12 +45,9 @@ describe('TxObject', () => {
         }
       })
       signedTx = await MemoryAccount({ keypair: keyPair, networkId: 'ae_mainnet' }).signTransaction(txObject.encodedTx)
-      console.log(txObject.encodedTx)
       txObject.encodedTx.should.be.a('string')
-      console.log('no!')
       expect(txObject.rlpEncoded).to.be.an.instanceOf(Uint8Array)
       txObject.binary.should.be.a('Array')
-      console.log('yes!')
       txObject.params.should.be.a('object')
     })
 

@@ -19,8 +19,8 @@ export function sha256hash (input: Uint8Array | string): Buffer {
 }
 
 // based on https://github.com/aeternity/protocol/blob/master/node/api/api_encoding.md
-const base64Types = ['ba', 'cb', 'or', 'ov', 'pi', 'ss', 'cs', 'ck', 'cv', 'st', 'tx'] as const
-const base58Types = ['ak', 'bf', 'bs', 'bx', 'ch', 'cm', 'ct', 'kh', 'mh', 'nm', 'ok', 'oq', 'pp', 'sg', 'th'] as const
+const base64Types = ['ba', 'cb', 'or', 'ov', 'pi', 'ss', 'cs', 'ck', 'cv', 'st', 'tx']
+const base58Types = ['ak', 'bf', 'bs', 'bx', 'ch', 'cm', 'ct', 'kh', 'mh', 'nm', 'ok', 'oq', 'pp', 'sg', 'th']
 export type EncodingType = typeof base64Types[number] | typeof base58Types[number] | string
 export type EncodedData<Type extends EncodingType> = `${Type}_${string}`
 // TODO: add all types with a fixed length

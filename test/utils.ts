@@ -1,4 +1,4 @@
-function randomString (len) {
+function randomString (len: number): string {
   const charSet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
   let randomString = ''
   for (let i = 0; i < len; i++) {
@@ -8,6 +8,6 @@ function randomString (len) {
   return randomString
 }
 
-export function randomName (length) {
+export function randomName (length: number): string {
   return randomString(length) + '.chain'
 }

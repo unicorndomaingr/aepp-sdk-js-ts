@@ -420,11 +420,11 @@ const SPEND_TX = [
   TX_FIELD('payload', FIELD_TYPES.payload)
 ]
 
-export interface EncodedTx<T extends TxBase> {
+export interface EncodedTx<Tx extends TxBase> {
   txType: typeof TX_TYPE[keyof typeof TX_TYPE]
   rlpEncoded: Buffer
   binary: Buffer[]
-  tx: T
+  tx: Tx
   fee: BigNumber
 }
 export interface TxSigned extends TxBase {
@@ -568,7 +568,6 @@ export interface TxGaMeta2 extends TxBase {
   gaId: string
   authData: string
   abiVersion: number
-
   gasLimit: number
   gasPrice: number
   tx: Buffer
