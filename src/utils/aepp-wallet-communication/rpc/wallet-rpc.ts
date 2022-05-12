@@ -16,7 +16,6 @@ import AccountMultiple from '../../../account/multiple'
 // @ts-expect-error TODO remove
 import TxObject from '../../../tx/tx-object'
 import RpcClient, { Accounts, Connection, Message, RpcClientInfo } from './rpc-client'
-// @ts-expect-error TODO remove
 import { getBrowserAPI, getHandler, isValidAccounts, message, sendResponseMessage } from '../helpers'
 import { ERRORS, METHODS, RPC_STATUS, VERSION, WALLET_TYPE } from '../schema'
 import { ArgumentError, TypeError, UnknownRpcClientError } from '../../errors'
@@ -263,7 +262,7 @@ const handleMessage = (instance: Ae, id: string) => async (msg: Message, origin:
  * @function
  * @rtype Stamp
  * @param param Init params object
- * @param [param.name] Wallet name
+ * @param param.name Wallet name
  * @param onConnection Call-back function for incoming AEPP connection
  * @param onSubscription Call-back function for incoming AEPP account subscription
  * @param onSign Call-back function for incoming AEPP sign request
@@ -396,7 +395,7 @@ export default Ae.compose(AccountMultiple, {
      * @rtype (postFn: Function) => void
      * @param postFn Send message function like `(msg) => void`
      */
-    shareWalletInfo (postFn: (msg: Message) => void): void {
+    shareWalletInfo (postFn: (msg: Partial<Message>) => void): void {
       postFn({
         jsonrpc: '2.0',
         ...message(METHODS.readyToConnect, this.getWalletInfo())

@@ -2,8 +2,7 @@
  * Browser helper functions
  */
 import { NoBrowserFoundError } from '../errors'
-// @ts-expect-error TODO remove when RPC migration is merged
-import RpcClient from './rpc/rpc-client'
+import RpcClient, { Connection, Message, Accounts } from './rpc/rpc-client'
 
 interface Browser {
   extension?: any
@@ -23,47 +22,6 @@ export const getBrowserAPI = (force = false): Browser => {
 }
 
 export const isInIframe = (): boolean => window !== window.parent
-
-// TODO remove and import from RPC when RPC migration is merged
-interface Connection {
-  sendMessage: (msg: Partial<Message>) => void
-  isConnected: () => boolean
-  disconnect: (forceConnectionClose?: boolean) => void
-  connect: (
-    handleMessage: (msg: any, origin: string) => void,
-    disconnect: (connection: Connection) => void
-  ) => void
-  connectionInfo: {id: string}
-  id: string
-  origin?: string
-  debug: boolean
-  forceOrigin: boolean
-  sendDirection?: string
-  receiveDirection: string
-  subscribeFn: Function
-  unsubscribeFn: Function
-  postFn: Function
-  listener?: Function
-}
-// TODO remove and import from RPC when RPC migration is merged
-interface Message {
-  jsonrpc: string
-  id: number
-  method: string
-  version: number
-  params?: any
-  result?: any
-  error?: {
-    code: number
-    data?: any
-    message: string
-  }
-}
-// TODO remove and import from RPC when RPC migration is merged
-interface Accounts {
-  connected?: { [pub: string]: {} }
-  current?: { [pub: string]: {} }
-}
 
 type SendMessage = (
   { id, method, params, result, error }: Message, isNotificationOrResponse?: boolean) => number

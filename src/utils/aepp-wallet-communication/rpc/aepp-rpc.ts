@@ -17,7 +17,6 @@ import AccountRpc from '../../../account/rpc'
 import { decode, EncodedData } from '../../encoder'
 import AsyncInit from '../../../utils/async-init'
 import RpcClient, { Connection, Message } from './rpc-client'
-// @ts-expect-error TODO remove
 import { getHandler, message } from '../helpers'
 import { METHODS, RPC_STATUS, VERSION } from '../schema'
 import {

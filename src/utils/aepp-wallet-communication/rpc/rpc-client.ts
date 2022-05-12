@@ -8,7 +8,6 @@
  */
 
 import { METHODS, RPC_STATUS, SUBSCRIPTION_TYPES } from '../schema'
-// @ts-expect-error TODO remove
 import { sendMessage, message, isValidAccounts } from '../helpers'
 import {
   InvalidRpcMessageError,
@@ -18,6 +17,7 @@ import {
 } from '../../errors'
 
 export interface Connection {
+  sendMessage: (msg: Partial<Message>) => void
   isConnected: () => boolean
   disconnect: (forceConnectionClose?: boolean) => void
   connect: (
@@ -265,7 +265,7 @@ export default class RpcClient {
    * @param params Method params
    * @return Promise which will be resolved after receiving response message
    */
-  async request (name: string, params: string): Promise<void> {
+  async request (name: string, params: object): Promise<void> {
     const msgId = this.sendMessage(message(name, params))
     if (this.callbacks.has(msgId)) {
       throw new DuplicateCallbackError()

@@ -32,21 +32,7 @@ import {
   AlreadyConnectedError,
   NoWalletConnectedError
 } from '../../errors'
-
-// TODO remove and import from RPC when RPC migration is merged
-interface Message {
-  jsonrpc: string
-  id: number
-  method: string
-  version: number
-  params?: any
-  result?: any
-  error?: {
-    code: number
-    data?: any
-    message: string
-  }
-}
+import { Message } from '../rpc/rpc-client'
 
 interface Port {
   name: string

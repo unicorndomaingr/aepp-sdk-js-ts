@@ -27,21 +27,7 @@
 import { UnsupportedPlatformError, MissingParamError } from '../errors'
 import BrowserRuntimeConnection from './connection/browser-runtime'
 import BrowserWindowMessageConnection from './connection/browser-window-message'
-
-// TODO remove and import from RPC when RPC migration is merged
-interface Message {
-  jsonrpc: string
-  id: number
-  method: string
-  version: number
-  params?: any
-  result?: any
-  error?: {
-    code: number
-    data?: any
-    message: string
-  }
-}
+import { Message } from './rpc/rpc-client'
 
 /**
  * ContentScriptBridge
