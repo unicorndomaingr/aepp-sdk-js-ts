@@ -17,10 +17,10 @@
 
 import { describe, it, before } from 'mocha'
 import { expect } from 'chai'
-import { getSdk, BaseAe, networkId } from './'
+import { getSdk, BaseAe, networkId } from '.'
 import { generateKeyPair } from '../../src/utils/crypto'
 import BigNumber from 'bignumber.js'
-import MemoryAccount from '../../src/account/memory'
+import MemoryAccount, { _AccountMemory } from '../../src/account/memory'
 import { AE_AMOUNT_FORMATS } from '../../src/utils/amount-formatter'
 import {
   UnavailableAccountError,
@@ -31,7 +31,7 @@ import {
 } from '../../src/utils/errors'
 
 describe('Accounts', function () {
-  let aeSdk, aeSdkWithoutAccount
+  let aeSdk: any, aeSdkWithoutAccount: any
 
   before(async function () {
     aeSdk = await getSdk()
@@ -42,7 +42,7 @@ describe('Accounts', function () {
   const receiver = receiverKey.publicKey
 
   describe('fails on unknown keypairs', () => {
-    let wallet
+    let wallet: any
 
     before(async function () {
       wallet = await getSdk()
@@ -65,8 +65,13 @@ describe('Accounts', function () {
     return aeSdk.getBalance(await aeSdk.address()).should.eventually.be.a('string')
   })
 
-  describe('transferFunds', async () => {
-    const spend = async fraction => {
+  describe('transferFunds', () => {
+    const spend = async (fraction: number): Promise<{
+      balanceBefore: BigNumber
+      balanceAfter: BigNumber
+      amount: BigNumber
+      fee: BigNumber
+    }> => {
       const balanceBefore = new BigNumber(await aeSdk.getBalance(await aeSdk.address()))
       const { tx } = await aeSdk.transferFunds(fraction, receiver)
       const balanceAfter = new BigNumber(await aeSdk.getBalance(await aeSdk.address()))
@@ -136,26 +141,26 @@ describe('Accounts', function () {
   })
 
   it('Get Account by block height/hash', async () => {
-    const h = await aeSdk.height()
+    const h: number = await aeSdk.height()
     await aeSdk.awaitHeight(h + 3)
     const spend = await aeSdk.spend(123, 'ak_DMNCzsVoZnpV5fe8FTQnNsTfQ48YM5C3WbHPsJyHjAuTXebFi')
-    await aeSdk.awaitHeight(spend.blockHeight + 2)
+    await aeSdk.awaitHeight(parseInt(spend.blockHeight) + 2)
     const accountAfterSpend = await aeSdk.getAccount(await aeSdk.address())
     const accountBeforeSpendByHash = await aeSdk.getAccount(
       await aeSdk.address(), { height: spend.blockHeight - 1 }
     )
-    BigNumber(accountBeforeSpendByHash.balance)
-      .minus(BigNumber(accountAfterSpend.balance))
+    new BigNumber(accountBeforeSpendByHash.balance)
+      .minus(new BigNumber(accountAfterSpend.balance))
       .toString()
       .should.be
-      .equal(`${spend.tx.fee + spend.tx.amount}`)
+      .equal(`${parseInt(spend.tx.fee) + parseInt(spend.tx.amount)}`)
   })
 
   describe('Make operation on specific account without changing of current account', () => {
     it('Can make spend on specific account', async () => {
-      const current = await aeSdk.address()
+      const current: string = await aeSdk.address()
       const accounts = aeSdk.addresses()
-      const onAccount = accounts.find(acc => acc !== current)
+      const onAccount = accounts.find((acc: string) => acc !== current)
 
       const { tx } = await aeSdk.spend(1, await aeSdk.address(), { onAccount })
       tx.senderId.should.be.equal(onAccount)
@@ -163,21 +168,21 @@ describe('Accounts', function () {
     })
 
     it('Fail on invalid account', async () => {
-      return expect(aeSdk.spend(1, await aeSdk.address(), { onAccount: 1 }))
+      return await expect(aeSdk.spend(1, await aeSdk.address(), { onAccount: 1 }))
         .to.be.rejectedWith(
           TypeError,
           'Account should be an address (ak-prefixed string), keypair, or instance of AccountBase, got 1 instead')
     })
 
     it('Fail on non exist account', async () => {
-      return expect(aeSdk.spend(1, await aeSdk.address(), { onAccount: 'ak_q2HatMwDnwCBpdNtN9oXf5gpD9pGSgFxaa8i2Evcam6gjiggk' }))
+      return await expect(aeSdk.spend(1, await aeSdk.address(), { onAccount: 'ak_q2HatMwDnwCBpdNtN9oXf5gpD9pGSgFxaa8i2Evcam6gjiggk' }))
         .to.be.rejectedWith(
           UnavailableAccountError,
           'Account for ak_q2HatMwDnwCBpdNtN9oXf5gpD9pGSgFxaa8i2Evcam6gjiggk not available')
     })
 
     it('Fail on no accounts', async () => {
-      return expect(aeSdkWithoutAccount.spend(1, await aeSdk.address()))
+      return await expect(aeSdkWithoutAccount.spend(1, await aeSdk.address()))
         .to.be.rejectedWith(
           TypeError,
           'Account should be an address (ak-prefixed string), keypair, or instance of AccountBase, got undefined instead')
@@ -191,13 +196,13 @@ describe('Accounts', function () {
     })
     it('Make operation on account using keyPair/MemoryAccount', async () => {
       const keypair = generateKeyPair()
-      const memoryAccount = MemoryAccount({ keypair })
+      const memoryAccount: _AccountMemory = MemoryAccount({ keypair })
       const data = 'Hello'
       const signature = await memoryAccount.sign(data)
       const sigUsingKeypair = await aeSdk.sign(data, { onAccount: keypair })
       const sigUsingMemoryAccount = await aeSdk.sign(data, { onAccount: memoryAccount })
-      signature.toString('hex').should.be.equal(sigUsingKeypair.toString('hex'))
-      signature.toString('hex').should.be.equal(sigUsingMemoryAccount.toString('hex'))
+      signature.toString().should.be.equal(sigUsingKeypair.toString('hex'))
+      signature.toString().should.be.equal(sigUsingMemoryAccount.toString('hex'))
       // address
       const addressFromKeypair = await aeSdk.address({ onAccount: keypair })
       const addressFrommemoryAccount = await aeSdk.address({ onAccount: memoryAccount })

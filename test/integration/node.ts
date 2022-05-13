@@ -17,7 +17,6 @@
 
 // @ts-expect-error
 import Node from '../../src/node'
-// @ts-expect-error
 import { url, ignoreVersion } from '.'
 import { describe, it, before } from 'mocha'
 import { expect } from 'chai'

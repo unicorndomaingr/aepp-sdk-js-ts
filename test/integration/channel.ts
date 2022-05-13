@@ -18,7 +18,6 @@ import { describe, it, before, after, beforeEach, afterEach } from 'mocha'
 import { expect } from 'chai'
 import * as sinon from 'sinon'
 import BigNumber from 'bignumber.js'
-// @ts-expect-error
 import { getSdk, BaseAe, networkId } from '.'
 import { generateKeyPair } from '../../src/utils/crypto'
 import { pause } from '../../src/utils/other'
@@ -54,8 +53,8 @@ async function waitForChannel (channel: Channel): Promise<void> {
 }
 
 describe('Channel', function () {
-  let aeSdkInitiatior: typeof BaseAe
-  let aeSdkResponder: typeof BaseAe
+  let aeSdkInitiatior: any
+  let aeSdkResponder: any
   let initiatorCh: Channel
   let responderCh: Channel
   let responderShouldRejectUpdate: number | boolean

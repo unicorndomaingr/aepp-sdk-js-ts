@@ -1,6 +1,6 @@
 /*
  * ISC License (ISC)
- * Copyright (c) 2018 aeternity developers
+ * Copyright (c) 2022 aeternity developers
  *
  *  Permission to use, copy, modify, and/or distribute this software for any
  *  purpose with or without fee is hereby granted, provided that the above
@@ -17,11 +17,102 @@
 import { expect } from 'chai'
 import { before, describe, it } from 'mocha'
 import { randomName } from '../utils'
-import { BaseAe, getSdk, publicKey, compilerUrl } from './'
+import { BaseAe, getSdk, publicKey, compilerUrl } from '.'
 import {
   IllegalArgumentError, NodeInvocationError, MemoryAccount, generateKeyPair,
   commitmentHash, decode, encode, DRY_RUN_ACCOUNT, messageToHash, salt
+  // @ts-expect-error TODO remove
 } from '../../src'
+
+// TODO remove and import interfaces once contract aci is merged
+interface FunctionACI {
+  arguments: any[]
+  name: string
+  payable: boolean
+  returns: string
+  stateful: boolean
+}
+interface Aci {
+  encodedAci: {contract: {
+    name: string
+    event: any
+    kind: string
+    state: any
+    type_defs: any[]
+    functions: FunctionACI[]
+  }}
+  externalEncodedAci: any[]
+  interface: string
+}
+interface Event {
+  address: string
+  data: string
+  topics: Array<string | number>
+}
+interface ContractInstance {
+  _aci: Aci
+  _name: string
+  calldata: any
+  source?: string
+  bytecode?: string
+  deployInfo: {
+    address?: string
+    result?: {
+      callerId: string
+      callerNonce: number
+      contractId: string
+      gasPrice: number
+      gasUsed: number
+      height: number
+      log: any[]
+      returnType: string
+      returnValue: string
+    }
+    owner?: string
+    transaction?: string
+    rawTx?: string
+    txData?: TxData
+  }
+  options: any
+  compilerVersion: string
+  compile: (options?: {}) => Promise<string>
+  _estimateGas: (name: string, params: any[], options: any) => Promise<number>
+  deploy: (params: any[], options: object) => Promise<any>
+  call: (fn: string, params?: any[], options?: {}) => Promise<any>
+  decodeEvents: (events: Event[], { omitUnknown, contractAddressToName, ...opt }: {
+    omitUnknown?: boolean
+    contractAddressToName?: {[key: string]: string }}) => Array<DecodedEvent | null>
+  methods: any
+}
+interface TxData {
+  blockHash: string
+  blockHeight: number
+  hash: string
+  signatures: any[]
+  tx: object[]
+  rawTx: string
+  callerId: string
+  callerNonce: number
+  contractId: string
+  gasPrice: number
+  gasUsed: number
+  height: number
+  log: any[]
+  returnType: string
+  returnValue: string
+}
+interface DecodedEvent {
+  name: string
+  args: unknown
+  contract: {
+    name: string
+    address: string
+  }
+}
+
+// TODO remove and import types once ae oracle is merged
+type Oracle = any
+type QueryObject = any
 
 const identityContract = `
 contract Identity =
@@ -114,10 +205,10 @@ contract Sign =
 `
 
 describe('Contract', function () {
-  let aeSdk
-  let bytecode
-  let contract
-  let deployed
+  let aeSdk: any
+  let bytecode: string
+  let contract: ContractInstance
+  let deployed: ContractInstance['deployInfo']
 
   before(async function () {
     aeSdk = await getSdk()
@@ -131,12 +222,12 @@ describe('Contract', function () {
     bytecode = (await aeSdk.compilerApi.compileContract({
       code: identityContract, options: {}
     })).bytecode
-    expect(bytecode).to.satisfy(b => b.startsWith('cb_'))
+    expect(bytecode).to.satisfy((b: string) => b.startsWith('cb_'))
   })
 
   it('deploys precompiled bytecode', async () => {
     contract = await aeSdk.getContractInstance({ bytecode, source: identityContract })
-    expect(await contract.deploy()).to.have.property('address')
+    expect(await contract.deploy([], {})).to.have.property('address')
   })
 
   it('throws exception if deploy deposit is not zero', async () => {
@@ -167,8 +258,8 @@ describe('Contract', function () {
     contract.deployInfo = {}
     const onAccount = aeSdk.addresses()[1]
     contract.options.onAccount = onAccount
-    deployed = await contract.deploy()
-    expect(deployed.result.callerId).to.be.equal(onAccount)
+    deployed = await contract.deploy([], {})
+    expect(deployed?.result?.callerId).to.be.equal(onAccount)
     expect((await contract.methods.getArg(42, { callStatic: true })).result.callerId)
       .to.be.equal(onAccount)
     expect((await contract.methods.getArg(42, { callStatic: false })).result.callerId)
@@ -230,7 +321,7 @@ describe('Contract', function () {
 
   it('calls deployed contracts static', async () => {
     const result = await contract.methods.getArg(42, { callStatic: true })
-    expect(result.decodedResult).to.be.equal(42n)
+    expect(result.decodedResult).to.be.equal(BigInt(42))
   })
 
   it('initializes contract state', async () => {
@@ -241,13 +332,13 @@ describe('Contract', function () {
   })
 
   describe('Namespaces', () => {
-    let contract
+    let contract: ContractInstance
 
     it('Can compiler contract with external deps', async () => {
       contract = await aeSdk.getContractInstance({
         source: contractWithLib, fileSystem: { testLib: libContract }
       })
-      expect(await contract.compile()).to.satisfy(b => b.startsWith('cb_'))
+      expect(await contract.compile()).to.satisfy((b: string) => b.startsWith('cb_'))
     })
 
     it('Throw error when try to compile contract without providing external deps', async () => {
@@ -256,7 +347,7 @@ describe('Contract', function () {
     })
 
     it('Can deploy contract with external deps', async () => {
-      const deployInfo = await contract.deploy()
+      const deployInfo = await contract.deploy([], {})
       expect(deployInfo).to.have.property('address')
 
       const deployedStatic = await contract.deploy([], { callStatic: true })
@@ -266,20 +357,19 @@ describe('Contract', function () {
 
     it('Can call contract with external deps', async () => {
       expect((await contract.methods.sumNumbers(1, 2, { callStatic: false })).decodedResult)
-        .to.be.equal(3n)
+        .to.be.equal(BigInt(3))
       expect((await contract.methods.sumNumbers(1, 2, { callStatic: true })).decodedResult)
-        .to.be.equal(3n)
+        .to.be.equal(BigInt(3))
     })
   })
 
   describe('Sophia Compiler', function () {
-    let bytecode
+    let bytecode: string
 
     it('compile', async () => {
       bytecode = (await aeSdk.compilerApi.compileContract({
         code: identityContract, options: {}
       })).bytecode
-      expect(bytecode).to.be.a('string')
       expect(bytecode.split('_')[0]).to.be.equal('cb')
     })
 
@@ -328,18 +418,18 @@ describe('Contract', function () {
   })
 
   describe('AENS operation delegation', () => {
-    let contract
-    let contractId
+    let contract: ContractInstance
+    let contractId: string
     const name = randomName(15)
     const nameSalt = salt()
-    let owner
-    let newOwner
-    let delegationSignature
+    let owner: string
+    let newOwner: string
+    let delegationSignature: string
 
     before(async () => {
       contract = await aeSdk.getContractInstance({ source: aensDelegationContract })
-      await contract.deploy()
-      contractId = contract.deployInfo.address;
+      await contract.deploy([], {})
+      contractId = contract.deployInfo.address ?? '';
       [owner, newOwner] = aeSdk.addresses()
     })
 
@@ -351,7 +441,7 @@ describe('Contract', function () {
       const preclaim = await contract.methods
         .signedPreclaim(owner, commitmentIdDecoded, preclaimSig)
       preclaim.result.returnType.should.be.equal('ok')
-      await aeSdk.awaitHeight(2 + await aeSdk.height())
+      await aeSdk.awaitHeight(2 + parseInt(await aeSdk.height()))
       // signature for any other name related operations
       delegationSignature = await aeSdk.createAensDelegationSignature({ contractId, name })
     })
@@ -401,20 +491,20 @@ describe('Contract', function () {
   })
 
   describe('Oracle operation delegation', () => {
-    let contract
-    let contractId
-    let address
-    let oracle
-    let oracleId
-    let queryObject
-    let delegationSignature
+    let contract: ContractInstance
+    let contractId: string
+    let address: string
+    let oracle: Oracle
+    let oracleId: string
+    let queryObject: QueryObject
+    let delegationSignature: string
     const queryFee = 500000
     const ttl = { RelativeTTL: [50] }
 
     before(async () => {
       contract = await aeSdk.getContractInstance({ source: oracleContract })
-      await contract.deploy()
-      contractId = contract.deployInfo.address
+      await contract.deploy([], {})
+      contractId = contract.deployInfo.address ?? ''
       address = await aeSdk.address()
       oracleId = encode(decode(address), 'ok')
     })
@@ -435,7 +525,7 @@ describe('Contract', function () {
       )
       queryExtend.result.returnType.should.be.equal('ok')
       const oracleExtended = await aeSdk.getOracleObject(oracleId)
-      oracleExtended.ttl.should.be.equal(oracle.ttl + 50)
+      oracleExtended.ttl.should.be.equal(parseInt(oracle.ttl) + 50)
     })
 
     it('creates query', async () => {

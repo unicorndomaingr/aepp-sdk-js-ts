@@ -38,7 +38,7 @@ export interface Keypair {
   secretKey: string | Uint8Array
 }
 
-class _AccountMemory extends _AccountBase {
+export class _AccountMemory extends _AccountBase {
   isGa: boolean
 
   init (

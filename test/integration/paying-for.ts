@@ -18,11 +18,98 @@
 import { describe, it, before } from 'mocha'
 import { expect } from 'chai'
 import BigNumber from 'bignumber.js'
-import { getSdk, BaseAe } from './'
+import { getSdk, BaseAe } from '.'
+// @ts-expect-error TODO remove
 import { generateKeyPair, MemoryAccount } from '../../src'
 
+// TODO remove and import interfaces once contract aci is merged
+interface FunctionACI {
+  arguments: any[]
+  name: string
+  payable: boolean
+  returns: string
+  stateful: boolean
+}
+interface Aci {
+  encodedAci: {contract: {
+    name: string
+    event: any
+    kind: string
+    state: any
+    type_defs: any[]
+    functions: FunctionACI[]
+  }}
+  externalEncodedAci: any[]
+  interface: string
+}
+interface Event {
+  address: string
+  data: string
+  topics: Array<string | number>
+}
+interface ContractInstance {
+  _aci: Aci
+  _name: string
+  calldata: any
+  source?: string
+  bytecode?: string
+  deployInfo: {
+    address?: string
+    result?: {
+      callerId: string
+      callerNonce: number
+      contractId: string
+      gasPrice: number
+      gasUsed: number
+      height: number
+      log: any[]
+      returnType: string
+      returnValue: string
+    }
+    owner?: string
+    transaction?: string
+    rawTx?: string
+    txData?: TxData
+  }
+  options: any
+  compilerVersion: string
+  compile: (options?: {}) => Promise<string>
+  _estimateGas: (name: string, params: any[], options: any) => Promise<number>
+  deploy: (params: any[], options: object) => Promise<any>
+  call: (fn: string, params?: any[], options?: {}) => Promise<any>
+  decodeEvents: (events: Event[], { omitUnknown, contractAddressToName, ...opt }: {
+    omitUnknown?: boolean
+    contractAddressToName?: {[key: string]: string }}) => Array<DecodedEvent | null>
+  methods: any
+}
+interface TxData {
+  blockHash: string
+  blockHeight: number
+  hash: string
+  signatures: any[]
+  tx: object[]
+  rawTx: string
+  callerId: string
+  callerNonce: number
+  contractId: string
+  gasPrice: number
+  gasUsed: number
+  height: number
+  log: any[]
+  returnType: string
+  returnValue: string
+}
+interface DecodedEvent {
+  name: string
+  args: unknown
+  contract: {
+    name: string
+    address: string
+  }
+}
+
 describe('Paying for transaction of another account', function () {
-  let aeSdk
+  let aeSdk: any
 
   before(async function () {
     aeSdk = await getSdk()
@@ -55,9 +142,9 @@ describe('Paying for transaction of another account', function () {
       entrypoint init(x: int): state = { value = x }
       entrypoint getValue(): int = state.value
       stateful entrypoint setValue(x: int) = put(state{ value = x })`
-  let contractAddress
-  let aeSdkNotPayingFee
-  let payingContract
+  let contractAddress: string
+  let aeSdkNotPayingFee: any
+  let payingContract: ContractInstance
 
   it('pays for contract deployment', async () => {
     aeSdkNotPayingFee = await BaseAe({
@@ -66,14 +153,15 @@ describe('Paying for transaction of another account', function () {
     }, {
       deepProps: { Ae: { defaults: { waitMined: false, innerTx: true } } }
     })
-    const contract = await aeSdkNotPayingFee.getContractInstance({ source: contractSource })
-    const { rawTx: contractDeployTx, address } = await contract.deploy([42])
+    const contract: ContractInstance = await aeSdkNotPayingFee
+      .getContractInstance({ source: contractSource })
+    const { rawTx: contractDeployTx, address } = await contract.deploy([42], {})
     contractAddress = address
     await aeSdk.payForTransaction(contractDeployTx)
     payingContract = await aeSdkNotPayingFee.getContractInstance(
       { source: contractSource, contractAddress }
     )
-    expect((await payingContract.methods.getValue()).decodedResult).to.be.equal(42n)
+    expect((await payingContract.methods.getValue()).decodedResult).to.be.equal(BigInt(42))
   })
 
   it('pays for contract call', async () => {
@@ -82,6 +170,6 @@ describe('Paying for transaction of another account', function () {
     )
     const { rawTx: contractCallTx } = await contract.methods.setValue(43)
     await aeSdk.payForTransaction(contractCallTx)
-    expect((await payingContract.methods.getValue()).decodedResult).to.be.equal(43n)
+    expect((await payingContract.methods.getValue()).decodedResult).to.be.equal(BigInt(43))
   })
 })

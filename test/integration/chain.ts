@@ -15,14 +15,14 @@
  *  PERFORMANCE OF THIS SOFTWARE.
  */
 import { describe, it, before } from 'mocha'
-import { expect } from 'chai'
+import { assert, expect } from 'chai'
 import { spy } from 'sinon'
 import http from 'http'
-import { getSdk } from './'
+import { getSdk } from '.'
 import { generateKeyPair } from '../../src/utils/crypto'
 
 describe('Node Chain', function () {
-  let aeSdk, aeSdkWithoutAccount
+  let aeSdk: any, aeSdkWithoutAccount: any
   const { publicKey } = generateKeyPair()
 
   before(async function () {
@@ -35,21 +35,21 @@ describe('Node Chain', function () {
   })
 
   it('combines height queries', async () => {
-    spy(http, 'request')
-    const heights = await Promise.all(new Array(5).fill().map(() => aeSdk.height()))
+    const httpSpy = spy(http, 'request')
+    const heights = await Promise.all(new Array(5).fill(undefined).map(() => aeSdk.height()))
     expect(heights).to.eql(heights.map(() => heights[0]))
-    expect(http.request.callCount).to.be.equal(1)
-    http.request.restore()
+    assert(httpSpy.calledOnce)
+    httpSpy.restore()
   })
 
   it('waits for specified heights', async () => {
-    const target = await aeSdkWithoutAccount.height() + 1
+    const target = parseInt(await aeSdkWithoutAccount.height()) + 1
     await aeSdkWithoutAccount.awaitHeight(target).should.eventually.be.at.least(target)
     return aeSdkWithoutAccount.height().should.eventually.be.at.least(target)
   })
 
   it('Can verify transaction from broadcast error', async () => {
-    const error = await aeSdk.spend(0, publicKey, { fee: 100, verify: false }).catch(e => e)
+    const error = await aeSdk.spend(0, publicKey, { fee: 100, verify: false }).catch((e: any) => e)
     expect(await error.verifyTx()).to.have.lengthOf(1)
   })
 
@@ -96,36 +96,36 @@ describe('Node Chain', function () {
 
   it('Wait for transaction confirmation', async () => {
     const txData = await aeSdk.spend(1000, await aeSdk.address(), { confirm: true })
-    const isConfirmed = (await aeSdk.height()) >= txData.blockHeight + 3
+    const isConfirmed = (await aeSdk.height()) >= parseInt(txData.blockHeight) + 3
 
     isConfirmed.should.be.equal(true)
 
     const txData2 = await aeSdk.spend(1000, await aeSdk.address(), { confirm: 4 })
-    const isConfirmed2 = (await aeSdk.height()) >= txData2.blockHeight + 4
+    const isConfirmed2 = (await aeSdk.height()) >= parseInt(txData2.blockHeight) + 4
     isConfirmed2.should.be.equal(true)
   })
 
-  const accounts = new Array(10).fill().map(() => generateKeyPair())
-  const transactions = []
+  const accounts = new Array(10).fill(undefined).map(() => generateKeyPair())
+  const transactions: any[] = []
 
   it('multiple spends from one account', async () => {
     const { nextNonce } = await aeSdk.api.getAccountNextNonce(await aeSdk.address())
-    spy(http, 'request')
+    const httpSpy = spy(http, 'request')
     const spends = await Promise.all(accounts.map((account, idx) => aeSdk.spend(
       Math.floor(Math.random() * 1000 + 1e16),
       account.publicKey,
-      { nonce: nextNonce + idx, verify: false, waitMined: false }
+      { nonce: parseInt(nextNonce) + idx, verify: false, waitMined: false }
     )))
     transactions.push(...spends.map(({ hash }) => hash))
     const accountGetCount = 1
     const txPostCount = accounts.length
-    expect(http.request.args.length).to.be.equal(accountGetCount + txPostCount)
-    http.request.restore()
+    expect(httpSpy.args.length).to.be.equal(accountGetCount + txPostCount)
+    httpSpy.restore()
   })
 
   it('multiple spends from different accounts', async () => {
     const receiver = await aeSdk.address()
-    spy(http, 'request')
+    const httpSpy = spy(http, 'request')
     const spends = await Promise.all(accounts.map(onAccount =>
       aeSdkWithoutAccount.spend(1e15, receiver, {
         nonce: 1, verify: false, onAccount, waitMined: false
@@ -133,11 +133,11 @@ describe('Node Chain', function () {
     transactions.push(...spends.map(({ hash }) => hash))
     const accountGetCount = accounts.length
     const txPostCount = accounts.length
-    expect(http.request.args.length).to.be.equal(accountGetCount + txPostCount)
-    http.request.restore()
+    expect(httpSpy.args.length).to.be.equal(accountGetCount + txPostCount)
+    httpSpy.restore()
   })
 
-  it('ensure transactions mined', () => Promise.all(transactions.map(hash => aeSdkWithoutAccount.poll(hash))))
+  it('ensure transactions mined', async () => await Promise.all(transactions.map(hash => aeSdkWithoutAccount.poll(hash))))
 
   it('multiple contract dry-runs calls at one request', async () => {
     const contract = await aeSdk.getContractInstance({
@@ -148,14 +148,14 @@ describe('Node Chain', function () {
     await contract.deploy()
     const { result: { gasUsed: gasLimit } } = await contract.methods.foo(5)
     const { nextNonce } = await aeSdk.api.getAccountNextNonce(await aeSdk.address())
-    spy(http, 'request')
-    const numbers = new Array(32).fill().map((v, idx) => idx * 2)
+    const httpSpy = spy(http, 'request')
+    const numbers = new Array(32).fill(undefined).map((v, idx) => idx * 2)
     const results = (await Promise.all(
       numbers.map((v, idx) => contract.methods
-        .foo(v, { nonce: nextNonce + idx, gasLimit, combine: true }))
+        .foo(v, { nonce: parseInt(nextNonce) + idx, gasLimit, combine: true }))
     )).map(r => r.decodedResult)
     expect(results).to.be.eql(numbers.map(v => BigInt(v * 100)))
-    expect(http.request.args.length).to.be.equal(1)
-    http.request.restore()
+    expect(httpSpy.args.length).to.be.equal(1)
+    httpSpy.restore()
   })
 })

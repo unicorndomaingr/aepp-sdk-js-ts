@@ -15,10 +15,10 @@
  *  PERFORMANCE OF THIS SOFTWARE.
  */
 
-import '../'
+import '..'
 import { describe, it } from 'mocha'
 import { expect } from 'chai'
-import MemoryAccount from '../../src/account/memory'
+import MemoryAccount, { _AccountMemory } from '../../src/account/memory'
 import { generateKeyPair } from '../../src/utils/crypto'
 import { InvalidKeypairError, DecodeError } from '../../src/utils/errors'
 
@@ -43,23 +43,23 @@ describe('MemoryAccount', function () {
   })
 
   it('Init with secretKey as hex string', async () => {
-    const acc = MemoryAccount({ keypair: testAcc })
-    return acc.address().should.eventually.be.equal(testAcc.publicKey)
+    const acc: _AccountMemory = MemoryAccount({ keypair: testAcc })
+    return await acc.address().should.eventually.be.equal(testAcc.publicKey)
   })
 
   it('Init with secretKey as hex Buffer', async () => {
-    const acc = MemoryAccount({
+    const acc: _AccountMemory = MemoryAccount({
       keypair: {
         publicKey: testAcc.publicKey,
-        secretKey: Buffer.from(testAcc.secretKey, 'hex')
+        secretKey: Buffer.isBuffer(testAcc.secretKey) ? testAcc.secretKey : Buffer.from(testAcc.secretKey, 'hex')
       }
     })
-    return acc.address().should.eventually.be.equal(testAcc.publicKey)
+    return await acc.address().should.eventually.be.equal(testAcc.publicKey)
   })
 
   it('Sign message', async () => {
     const message = 'test'
-    const acc = MemoryAccount({ keypair: testAcc })
+    const acc: _AccountMemory = MemoryAccount({ keypair: testAcc })
     const sig = await acc.signMessage(message)
     const sigHex = await acc.signMessage(message, { returnHex: true })
     const isValid = await acc.verifyMessage(message, sig)

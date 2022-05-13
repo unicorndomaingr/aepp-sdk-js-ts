@@ -1,6 +1,6 @@
 /*
  * ISC License (ISC)
- * Copyright (c) 2018 aeternity developers
+ * Copyright (c) 2022 aeternity developers
  *
  *  Permission to use, copy, modify, and/or distribute this software for any
  *  purpose with or without fee is hereby granted, provided that the above
@@ -17,11 +17,97 @@
 
 import { describe, it, before } from 'mocha'
 import { expect } from 'chai'
-import { getSdk } from './'
+import { getSdk } from '.'
 import { generateKeyPair } from '../../src/utils/crypto'
 import { encode } from '../../src/utils/encoder'
 import MemoryAccount from '../../src/account/memory'
+// @ts-expect-error TODO Remove
 import { unpackTx } from '../../src/tx/builder'
+
+// TODO remove and import interfaces once contract aci is merged
+interface FunctionACI {
+  arguments: any[]
+  name: string
+  payable: boolean
+  returns: string
+  stateful: boolean
+}
+interface Aci {
+  encodedAci: {contract: {
+    name: string
+    event: any
+    kind: string
+    state: any
+    type_defs: any[]
+    functions: FunctionACI[]
+  }}
+  externalEncodedAci: any[]
+  interface: string
+}
+interface ContractInstance {
+  _aci: Aci
+  _name: string
+  calldata: any
+  source?: string
+  bytecode?: string
+  deployInfo: {
+    address?: string
+    result?: {
+      callerId: string
+      callerNonce: number
+      contractId: string
+      gasPrice: number
+      gasUsed: number
+      height: number
+      log: any[]
+      returnType: string
+      returnValue: string
+    }
+    owner?: string
+    transaction?: string
+    rawTx?: string
+    txData?: TxData
+  }
+  options: any
+  compilerVersion: string
+  compile: (options?: {}) => Promise<string>
+  _estimateGas: (name: string, params: any[], options: any) => Promise<number>
+  deploy: (params: any[], options: object) => Promise<any>
+  call: (fn: string, params?: any[], options?: {}) => Promise<any>
+  decodeEvents: (events: Event[], { omitUnknown, ...opt }: {
+    omitUnknown?: boolean}) => Array<DecodedEvent | null>
+  methods: any
+}
+interface Event {
+  address: string
+  data: string
+  topics: Array<string | number>
+}
+interface TxData {
+  blockHash: string
+  blockHeight: number
+  hash: string
+  signatures: any[]
+  tx: object[]
+  rawTx: string
+  callerId: string
+  callerNonce: number
+  contractId: string
+  gasPrice: number
+  gasUsed: number
+  height: number
+  log: any[]
+  returnType: string
+  returnValue: string
+}
+interface DecodedEvent {
+  name: string
+  args: unknown
+  contract: {
+    name: string
+    address: string
+  }
+}
 
 const authContractSource = `contract BlindAuth =
   record state = { txHash: option(hash) }
@@ -37,9 +123,9 @@ const authContractSource = `contract BlindAuth =
       Some(tx_hash) => true
 `
 describe('Generalized Account', function () {
-  let aeSdk
+  let aeSdk: any
   const gaAccount = generateKeyPair()
-  let authContract
+  let authContract: ContractInstance
 
   before(async function () {
     aeSdk = await getSdk()
@@ -59,10 +145,10 @@ describe('Generalized Account', function () {
 
   it('Fail on make GA on already GA', async () => {
     await aeSdk.createGeneralizedAccount('authorize', authContractSource)
-      .should.be.rejectedWith(`Account ${gaAccount.publicKey} is already GA`)
+      .should.be.rejectedWith(`Account ${gaAccount.publicKey.toString()} is already GA`)
   })
 
-  const r = () => Math.floor(Math.random() * 20).toString()
+  const r = (): string => Math.floor(Math.random() * 20).toString()
   const { publicKey } = generateKeyPair()
 
   it('Init MemoryAccount for GA and Spend using GA', async () => {

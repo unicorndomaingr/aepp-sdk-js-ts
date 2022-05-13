@@ -1,6 +1,6 @@
 /*
  * ISC License (ISC)
- * Copyright (c) 2018 aeternity developers
+ * Copyright (c) 2022 aeternity developers
  *
  *  Permission to use, copy, modify, and/or distribute this software for any
  *  purpose with or without fee is hereby granted, provided that the above
@@ -17,6 +17,7 @@
 import { expect } from 'chai'
 import { before, describe, it } from 'mocha'
 import BigNumber from 'bignumber.js'
+// @ts-expect-error TODO remove
 import { decode } from '../../src/tx/builder/helpers'
 import {
   BytecodeMismatchError,
@@ -28,7 +29,115 @@ import {
   MissingEventDefinitionError,
   AmbiguousEventDefinitionError
 } from '../../src/utils/errors'
-import { getSdk } from './'
+import { getSdk } from '.'
+import { EncodedData } from '../../src/utils/encoder'
+
+// TODO remove and import interfaces once contract aci is merged
+interface FunctionACI {
+  arguments: any[]
+  name: string
+  payable: boolean
+  returns: string
+  stateful: boolean
+}
+interface Aci {
+  encodedAci: {contract: {
+    name: string
+    event: any
+    kind: string
+    state: any
+    type_defs: any[]
+    functions: FunctionACI[]
+  }}
+  externalEncodedAci: any[]
+  interface: string
+}
+interface Event {
+  address: string
+  data: string
+  topics: Array<string | number>
+}
+interface ContractInstance {
+  _aci: Aci
+  _name: string
+  calldata: any
+  source?: string
+  bytecode?: string
+  deployInfo: {
+    address?: string
+    result?: {
+      callerId: string
+      callerNonce: number
+      contractId: string
+      gasPrice: number
+      gasUsed: number
+      height: number
+      log: any[]
+      returnType: string
+      returnValue: string
+    }
+    owner?: string
+    transaction?: string
+    rawTx?: string
+    txData?: TxData
+  }
+  options: any
+  compilerVersion: string
+  compile: (options?: {}) => Promise<string>
+  _estimateGas: (name: string, params: any[], options: any) => Promise<number>
+  deploy: (params: any[], options: object) => Promise<any>
+  call: (fn: string, params?: any[], options?: {}) => Promise<any>
+  decodeEvents: (events: Event[], { omitUnknown, contractAddressToName, ...opt }: {
+    omitUnknown?: boolean
+    contractAddressToName?: {[key: string]: string }}) => Array<DecodedEvent | null>
+  methods: any
+}
+interface TxData {
+  blockHash: string
+  blockHeight: number
+  hash: string
+  signatures: any[]
+  tx: object[]
+  rawTx: string
+  callerId: string
+  callerNonce: number
+  contractId: string
+  gasPrice: number
+  gasUsed: number
+  height: number
+  log: any[]
+  returnType: string
+  returnValue: string
+}
+interface DecodedEvent {
+  name: string
+  args: unknown
+  contract: {
+    name: string
+    address: string
+  }
+}
+
+// don't remove this interface
+interface EventResult {
+  hash: string
+  tx: any
+  txData: TxData
+  rawTx: string
+  result: {
+    callerId: EncodedData<'ak'>
+    callerNonce: number
+    contractId: EncodedData<'ct'>
+    gasPrice: number
+    gasUsed: number
+    height: number
+    log: any[]
+    returnType: string
+    returnValue: string
+  }
+  decodedResult: boolean
+  decodedEvents: DecodedEvent[]
+}
 
 const identityContractSource = `
 contract Identity =
@@ -137,11 +246,11 @@ const fileSystem = {
 const notExistingContractAddress = 'ct_ptREMvyDbSh1d38t4WgYgac5oLsa2v9xwYFnG7eUWR8Er5cmT'
 
 describe('Contract instance', function () {
-  let aeSdk
-  let testContract
-  let testContractAddress
-  let testContractAci
-  let testContractBytecode
+  let aeSdk: any
+  let testContract: ContractInstance
+  let testContractAddress: string
+  let testContractAci: ContractInstance
+  let testContractBytecode: string
 
   before(async function () {
     aeSdk = await getSdk()
@@ -169,13 +278,13 @@ describe('Contract instance', function () {
     testContract.options.should.have.property('fileSystem')
     testContract.options.fileSystem.should.have.property('testLib')
     expect(Object.keys(testContract.methods)).to.be.eql(
-      testContract._aci.encodedAci.contract.functions.map(({ name }) => name)
+      testContract._aci.encodedAci.contract.functions.map(({ name }: { name: string }) => name)
     )
   })
 
   it('compiles', async () => {
     await testContract.compile()
-    expect(testContract.bytecode).to.satisfy(b => b.startsWith('cb_'))
+    expect(testContract.bytecode).to.satisfy((b: string) => b.startsWith('cb_'))
   })
 
   it('fails on calling without deployment', () => expect(testContract.methods.intFn(2))
@@ -191,18 +300,18 @@ describe('Contract instance', function () {
       gasPrice: '1e9',
       strategy: 'max'
     })
-    expect(deployInfo.address).to.satisfy(b => b.startsWith('ct_'))
+    expect(deployInfo.address).to.satisfy((b: string) => b.startsWith('ct_'))
     expect(deployInfo.txData.tx.gas).to.be.equal(16000)
     expect(deployInfo.txData.tx.amount).to.be.equal(42)
     expect(deployInfo.txData.gasUsed).to.be.equal(209)
     expect(deployInfo.txData.gasPrice).to.be.equal(1000000000)
     expect(deployInfo.txData.tx.deposit).to.be.equal(0)
-    expect(testContract.bytecode).to.satisfy(b => b.startsWith('cb_'))
+    expect(testContract.bytecode).to.satisfy((b: string) => b.startsWith('cb_'))
     testContractAddress = deployInfo.address
   })
 
   it('calls', async () => {
-    expect((await testContract.methods.intFn(2)).decodedResult).to.be.equal(2n)
+    expect((await testContract.methods.intFn(2)).decodedResult).to.be.equal(BigInt(2))
   })
 
   it('generates by aci', () =>
@@ -232,7 +341,7 @@ describe('Contract instance', function () {
     const contract = await aeSdk.getContractInstance(
       { aci: testContractAci, contractAddress: testContract.deployInfo.address }
     )
-    expect((await contract.methods.intFn(3)).decodedResult).to.be.equal(3n)
+    expect((await contract.methods.intFn(3)).decodedResult).to.be.equal(BigInt(3))
   })
 
   it('deploys and calls by bytecode and aci', async () => {
@@ -240,7 +349,7 @@ describe('Contract instance', function () {
       { bytecode: testContractBytecode, aci: testContractAci }
     )
     await contract.deploy(['test', 1])
-    expect((await contract.methods.intFn(3)).decodedResult).to.be.equal(3n)
+    expect((await contract.methods.intFn(3)).decodedResult).to.be.equal(BigInt(3))
   })
 
   it('accepts matching source code with enabled validation', () => aeSdk.getContractInstance({
@@ -263,7 +372,7 @@ describe('Contract instance', function () {
     validateBytecode: true
   }))
 
-  it('rejects not matching bytecode with enabled validation', async () => expect(aeSdk.getContractInstance({
+  it('rejects not matching bytecode with enabled validation', async () => await expect(aeSdk.getContractInstance({
     bytecode: (await aeSdk.compilerApi.compileContract({
       code: identityContractSource, options: {}
     })).bytecode,
@@ -317,14 +426,14 @@ describe('Contract instance', function () {
   })
 
   describe('Gas', () => {
-    let contract
+    let contract: ContractInstance
 
     before(async () => {
       contract = await aeSdk.getContractInstance({ source: testContractSource, fileSystem })
     })
 
     it('estimates gas by default for contract deployments', async () => {
-      const { tx: { gas }, gasUsed } = (await contract.deploy(['test', 42])).txData
+      const { tx: { gas }, gasUsed } = (await contract.deploy(['test', 42], {})).txData
       expect(gasUsed).to.be.equal(160)
       expect(gas).to.be.equal(200)
     })
@@ -361,19 +470,19 @@ describe('Contract instance', function () {
   })
 
   describe('Events parsing', () => {
-    let remoteContract
-    let eventResult
+    let remoteContract: ContractInstance
+    let eventResult: EventResult
 
     before(async () => {
       remoteContract = await aeSdk.getContractInstance({ source: remoteContractSource })
-      await remoteContract.deploy()
+      await remoteContract.deploy([], {})
       eventResult = await testContract.methods.emitEvents(remoteContract.deployInfo.address, false)
     })
 
     it('decodes events', () => {
       expect(eventResult.decodedEvents).to.be.eql([{
         name: 'AnotherEvent2',
-        args: [true, 'This is not indexed', 1n],
+        args: [true, 'This is not indexed', BigInt(1)],
         contract: {
           name: 'StateContract',
           address: testContract.deployInfo.address
@@ -382,7 +491,7 @@ describe('Contract instance', function () {
         name: 'RemoteEvent2',
         args: [
           'test-string',
-          43n
+          BigInt(43)
         ],
         contract: {
           name: 'RemoteI',
@@ -400,7 +509,7 @@ describe('Contract instance', function () {
         }
       }, {
         name: 'TheFirstEvent',
-        args: [42n],
+        args: [BigInt(42)],
         contract: {
           name: 'StateContract',
           address: testContract.deployInfo.address
@@ -409,16 +518,17 @@ describe('Contract instance', function () {
     })
 
     it('decodes events using decodeEvents', () => {
-      expect(testContract.decodeEvents(eventResult.result.log)).to.be.eql(eventResult.decodedEvents)
+      expect(
+        testContract.decodeEvents(eventResult.result.log, {})).to.be.eql(eventResult.decodedEvents)
     })
 
     it('throws error if can\'t find event definition', () => {
       const event = eventResult.result.log[0]
       event.topics[0] = event.topics[0].replace('0', '1')
-      expect(() => testContract.decodeEvents([event])).to.throw(
+      expect(() => testContract.decodeEvents([event], {})).to.throw(
         MissingEventDefinitionError,
         'Can\'t find definition of 7165442193418278913262533136158148486147352807284929017531784742205476270109' +
-        ` event emitted by ${testContract.deployInfo.address}` +
+        ` event emitted by ${testContract.deployInfo.address as string}` +
         ' (use omitUnknown option to ignore events like this)'
       )
     })
@@ -429,8 +539,11 @@ describe('Contract instance', function () {
       expect(testContract.decodeEvents([event], { omitUnknown: true })).to.be.eql([])
     })
 
-    const getDuplicateLog = () => [{
-      address: remoteContract.deployInfo.address,
+    const getDuplicateLog = (): Array<{
+      address: string
+      data: string
+      topics: Array<string | number>}> => [{
+      address: remoteContract.deployInfo.address ?? '',
       data: 'cb_Xfbg4g==',
       topics: [
         '28631352549432199952459007654025571262660118571086898449909844428770770966435',
@@ -439,10 +552,10 @@ describe('Contract instance', function () {
     }]
 
     it('throws error if found multiple event definitions', () => {
-      expect(() => testContract.decodeEvents(getDuplicateLog())).to.throw(
+      expect(() => testContract.decodeEvents(getDuplicateLog(), {})).to.throw(
         AmbiguousEventDefinitionError,
         'Found multiple definitions of "Duplicate" event emitted by' +
-        ` ${remoteContract.deployInfo.address} in "StateContract", "RemoteI" contracts` +
+        ` ${remoteContract.deployInfo.address ?? ''} in "StateContract", "RemoteI" contracts` +
         ' (use contractAddressToName option to specify contract name corresponding to address)'
       )
     })
@@ -451,11 +564,11 @@ describe('Contract instance', function () {
       expect(
         testContract.decodeEvents(
           getDuplicateLog(),
-          { contractAddressToName: { [remoteContract.deployInfo.address]: 'RemoteI' } }
+          { contractAddressToName: { [remoteContract.deployInfo.address ?? '']: 'RemoteI' } }
         )
       ).to.be.eql([{
         name: 'Duplicate',
-        args: [0n],
+        args: [BigInt(0)],
         contract: {
           address: remoteContract.deployInfo.address,
           name: 'RemoteI'
@@ -484,17 +597,19 @@ describe('Contract instance', function () {
 
       it('Valid', async () => {
         const { decodedResult } = await testContract.methods.intFn.get(1)
-        expect(decodedResult).to.be.equal(1n)
+        expect(decodedResult).to.be.equal(BigInt(1))
       })
 
-      const unsafeInt = BigInt(Number.MAX_SAFE_INTEGER + '0')
+      const unsafeInt = BigInt(Number.MAX_SAFE_INTEGER.toString() + '0')
       it('Supports unsafe integer', async () => {
         const { decodedResult } = await testContract.methods.intFn.get(unsafeInt)
         expect(decodedResult).to.be.equal(unsafeInt)
       })
 
       it('Supports BigNumber', async () => {
-        const { decodedResult } = await testContract.methods.intFn.get(new BigNumber(unsafeInt))
+        const { decodedResult } =
+        // TODO check this again
+          await testContract.methods.intFn.get(new BigNumber(unsafeInt.toString()))
         expect(decodedResult).to.be.equal(unsafeInt)
       })
     })
@@ -579,7 +694,7 @@ describe('Contract instance', function () {
 
       it('Valid', async () => {
         const { decodedResult } = await testContract.methods.tupleFn(['test', 1])
-        decodedResult.should.be.eql(['test', 1n])
+        decodedResult.should.be.eql(['test', BigInt(1)])
       })
     })
 
@@ -601,7 +716,7 @@ describe('Contract instance', function () {
 
       it('Valid', async () => {
         const { decodedResult } = await testContract.methods.listInListFn([[1, 2], [3, 4]])
-        decodedResult.should.be.eql([[1n, 2n], [3n, 4n]])
+        decodedResult.should.be.eql([[BigInt(1), BigInt(2)], [BigInt(3), BigInt(4)]])
       })
     })
 
@@ -609,13 +724,13 @@ describe('Contract instance', function () {
       const address = 'ak_gvxNbZf5CuxYVfcUFoKAP4geZatWaC2Yy4jpx5vZoCKank4Gc'
 
       it('Valid', async () => {
-        const mapArg = new Map([[address, ['someStringV', 324n]]])
+        const mapArg = new Map([[address, ['someStringV', BigInt(324)]]])
         const { decodedResult } = await testContract.methods.mapFn(mapArg)
         decodedResult.should.be.eql(mapArg)
       })
 
       it('Map With Option Value', async () => {
-        const mapWithSomeValue = new Map([[address, ['someStringV', 123n]]])
+        const mapWithSomeValue = new Map([[address, ['someStringV', BigInt(123)]]])
         const mapWithNoneValue = new Map([[address, ['someStringV', undefined]]])
         let result = await testContract.methods.mapOptionFn(mapWithSomeValue)
         result.decodedResult.should.be.eql(mapWithSomeValue)
@@ -624,16 +739,16 @@ describe('Contract instance', function () {
       })
 
       it('Cast from string to int', async () => {
-        const mapArg = new Map([[address, ['someStringV', '324']]])
+        const mapArg = new Map<string, Array<string | bigint>>([[address, ['someStringV', '324']]])
         const result = await testContract.methods.mapFn(mapArg)
-        mapArg.set(address, ['someStringV', 324n])
+        mapArg.set(address, ['someStringV', BigInt(324)])
         result.decodedResult.should.be.eql(mapArg)
       })
 
       it('Cast from array to map', async () => {
-        const mapArg = [[address, ['someStringV', 324n]]]
+        const mapArg: Array<[string, Array<string | bigint>]> = [[address, ['someStringV', BigInt(324)]]]
         const { decodedResult } = await testContract.methods.mapFn(mapArg)
-        decodedResult.should.be.eql(new Map(mapArg))
+        decodedResult.should.be.eql(new Map<string, Array<string | bigint>>(mapArg))
       })
     })
 
@@ -641,18 +756,18 @@ describe('Contract instance', function () {
       it('Valid Set Record (Cast from JS object)', async () => {
         await testContract.methods.setRecord({ value: 'qwe', key: 1234, testOption: 'test' })
         const state = await testContract.methods.getRecord()
-        state.decodedResult.should.be.eql({ value: 'qwe', key: 1234n, testOption: 'test' })
+        state.decodedResult.should.be.eql({ value: 'qwe', key: BigInt(1234), testOption: 'test' })
       })
 
       it('Get Record(Convert to JS object)', async () => {
         const result = await testContract.methods.getRecord()
-        result.decodedResult.should.be.eql({ value: 'qwe', key: 1234n, testOption: 'test' })
+        result.decodedResult.should.be.eql({ value: 'qwe', key: BigInt(1234), testOption: 'test' })
       })
 
       it('Get Record With Option (Convert to JS object)', async () => {
         await testContract.methods.setRecord({ key: 1234, value: 'qwe', testOption: 'resolved string' })
         const result = await testContract.methods.getRecord()
-        result.decodedResult.should.be.eql({ value: 'qwe', key: 1234n, testOption: 'resolved string' })
+        result.decodedResult.should.be.eql({ value: 'qwe', key: BigInt(1234), testOption: 'resolved string' })
       })
 
       it('Invalid value type', async () => {
@@ -664,12 +779,12 @@ describe('Contract instance', function () {
     describe('OPTION', function () {
       it('Set Some Option Value(Cast from JS value/Convert result to JS)', async () => {
         const optionRes = await testContract.methods.intOption(123)
-        optionRes.decodedResult.should.be.equal(123n)
+        optionRes.decodedResult.should.be.equal(BigInt(123))
       })
 
       it('Set Some Option List Value(Cast from JS value/Convert result to JS)', async () => {
         const optionRes = await testContract.methods.listOption([[1, 'testString']])
-        optionRes.decodedResult.should.be.eql([[1n, 'testString']])
+        optionRes.decodedResult.should.be.eql([[BigInt(1), 'testString']])
       })
 
       it('Set None Option Value(Cast from JS value/Convert to JS)', async () => {
@@ -686,7 +801,7 @@ describe('Contract instance', function () {
     describe('NAMESPACES', function () {
       it('Use namespace in function body', async () => {
         const res = await testContract.methods.usingExternalLib(2)
-        res.decodedResult.should.be.equal(4n)
+        res.decodedResult.should.be.equal(BigInt(4))
       })
     })
 
@@ -698,7 +813,7 @@ describe('Contract instance', function () {
 
       it('Call generic datatype', async () => {
         const res = await testContract.methods.datTypeGFn({ Left: [2] })
-        res.decodedResult.should.be.equal(2n)
+        res.decodedResult.should.be.equal(BigInt(2))
       })
 
       it('Invalid arguments length', async () => {
@@ -794,7 +909,7 @@ describe('Contract instance', function () {
       })
 
       it('Valid', async () => {
-        (await Promise.all([0, -1n, 0b101n]
+        (await Promise.all([0, BigInt(-1), BigInt(0b101)]
           .map(async value => [value, (await testContract.methods.bitsFn(value)).decodedResult])))
           .forEach(([v1, v2]) => expect(v2).to.be.equal(BigInt(v1)))
       })
@@ -807,7 +922,7 @@ describe('Contract instance', function () {
       })
 
       it('Valid', async () => {
-        const value = { FixedTTL: [50n] }
+        const value = { FixedTTL: [BigInt(50)] }
         expect((await testContract.methods.chainTtlFn(value)).decodedResult).to.be.eql(value)
       })
     })
@@ -816,12 +931,12 @@ describe('Contract instance', function () {
   describe('Call contract', function () {
     it('Call contract using using js type arguments', async () => {
       const res = await testContract.methods.listFn([1, 2])
-      expect(res.decodedResult).to.be.eql([1n, 2n])
+      expect(res.decodedResult).to.be.eql([BigInt(1), BigInt(2)])
     })
 
     it('Call contract with contract type argument', async () => {
       const result = await testContract.methods.approve(0, 'ct_AUUhhVZ9de4SbeRk8ekos4vZJwMJohwW5X8KQjBMUVduUmoUh')
-      expect(result.decodedResult).to.be.equal(0n)
+      expect(result.decodedResult).to.be.equal(BigInt(0))
     })
   })
 })

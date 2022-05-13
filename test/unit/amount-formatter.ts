@@ -1,6 +1,6 @@
 /*
  * ISC License (ISC)
- * Copyright (c) 2018 aeternity developers
+ * Copyright (c) 2022 aeternity developers
  *
  *  Permission to use, copy, modify, and/or distribute this software for any
  *  purpose with or without fee is hereby granted, provided that the above
@@ -20,7 +20,7 @@ import { expect } from 'chai'
 import BigNumber from 'bignumber.js'
 import '..'
 import { AE_AMOUNT_FORMATS, formatAmount, toAe, toAettos } from '../../src/utils/amount-formatter'
-import { InvalidDenominationError, IllegalArgumentError } from '../../src/utils/errors'
+import { InvalidDenominationError, ArgumentError } from '../../src/utils/errors'
 
 describe('Amount Formatter', function () {
   it('to aettos', () => {
@@ -30,7 +30,7 @@ describe('Amount Formatter', function () {
       [111, AE_AMOUNT_FORMATS.AE, '111000000000000000000'],
       [10012312, AE_AMOUNT_FORMATS.AE, '10012312000000000000000000'],
       [1, AE_AMOUNT_FORMATS.AETTOS, '1']
-    ].forEach(([v, denomination, e]: [number, string, string]) =>
+    ].forEach(([v, denomination, e]: [number, 'ae', string]) =>
       expect(toAettos(v, { denomination })).to.be.equal(e))
   })
 
@@ -41,7 +41,7 @@ describe('Amount Formatter', function () {
       [100, AE_AMOUNT_FORMATS.AETTOS, new BigNumber(100).div(1e18)],
       [10012312, AE_AMOUNT_FORMATS.AETTOS, new BigNumber(10012312).div(1e18)],
       [1, AE_AMOUNT_FORMATS.AE, 1]
-    ].forEach(([v, denomination, e]: [number, string, BigNumber]) =>
+    ].forEach(([v, denomination, e]: [number, 'aettos', BigNumber]) =>
       expect(toAe(v, { denomination })).to.be.equal(e.toString(10)))
   })
 
@@ -66,13 +66,14 @@ describe('Amount Formatter', function () {
       [1, AE_AMOUNT_FORMATS.NANO_AE, AE_AMOUNT_FORMATS.AETTOS, new BigNumber(1000000000)],
       [1, AE_AMOUNT_FORMATS.FEMTO_AE, AE_AMOUNT_FORMATS.AETTOS, new BigNumber(1000)],
       [1, AE_AMOUNT_FORMATS.NANO_AE, AE_AMOUNT_FORMATS.FEMTO_AE, new BigNumber(1000000)]
-    ].forEach(([v, denomination, targetDenomination, e]: [number, string, string, BigNumber]) =>
+    ].forEach(([v, denomination, targetDenomination, e]: [
+      number, 'ae', 'aettos', BigNumber]) =>
       expect(formatAmount(v, { denomination, targetDenomination })).to.be.equal(e.toString(10)))
   })
 
   it('Invalid value', () => {
     [
-      [true, AE_AMOUNT_FORMATS.AE, AE_AMOUNT_FORMATS.AE, IllegalArgumentError, 'Value true is not type of number'],
+      [true, AE_AMOUNT_FORMATS.AE, AE_AMOUNT_FORMATS.AE, ArgumentError, 'value should be a number, got true instead'],
       [1, AE_AMOUNT_FORMATS.AE, 'ASD', InvalidDenominationError, 'Invalid target denomination: ASD'],
       [1, 'ASD', AE_AMOUNT_FORMATS.AE, InvalidDenominationError, 'Invalid denomination: ASD']
     ].forEach(([v, dF, dT, error, msg]: any[]) => {

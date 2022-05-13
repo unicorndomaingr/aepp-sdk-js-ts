@@ -17,14 +17,21 @@
 
 import { before, describe, it, after } from 'mocha'
 import { expect } from 'chai'
+// @ts-expect-error TODO remove when RPC migration is merged
 import { MemoryAccount, Node, RpcAepp, RpcWallet } from '../../src'
+// @ts-expect-error TODO remove when RPC migration is merged
+import RpcClient from '../../src/utils/aepp-wallet-communication/rpc/rpc-client'
+// @ts-expect-error TODO remove when TX migration is merged
 import { unpackTx } from '../../src/tx/builder'
+// @ts-expect-error TODO remove when TX migration is merged
 import { decode } from '../../src/tx/builder/helpers'
+// @ts-expect-error TODO remove when RPC migration is merged
 import BrowserWindowMessageConnection from '../../src/utils/aepp-wallet-communication/connection/browser-window-message'
+// @ts-expect-error TODO remove when RPC migration is merged
 import { getBrowserAPI, getHandler } from '../../src/utils/aepp-wallet-communication/helpers'
 import { METHODS, RPC_STATUS } from '../../src/utils/aepp-wallet-communication/schema'
 import { generateKeyPair, verify, hash } from '../../src/utils/crypto'
-import { compilerUrl, account, networkId, url, ignoreVersion, spendPromise } from './'
+import { compilerUrl, account, networkId, url, ignoreVersion, spendPromise } from '.'
 import {
   NoBrowserFoundError,
   NoWalletConnectedError,
@@ -34,32 +41,53 @@ import {
   UnknownRpcClientError
 } from '../../src/utils/errors'
 
+interface Connection {
+  name: string
+  messages: any[]
+  addEventListener: (onEvent: any, listener: any) => void
+  removeEventListener: () => () => null
+  postMessage: (msg: any) => void
+}
+
+interface Connections {
+  walletConnection: Connection
+  aeppConnection: Connection
+}
+
+// TODO remove and import from RPC when it's merged
+interface Accounts {
+  connected?: { [pub: string]: {} }
+  current?: { [pub: string]: {} }
+}
+
+type ResolveFunc = (param: boolean) => void
+
 describe('Aepp<->Wallet', function () {
   this.timeout(6000)
-  let node
-  let connections
-  let connectionFromWalletToAepp
-  let connectionFromAeppToWallet
+  let node: Node
+  let connections: Connections
+  let connectionFromWalletToAepp: BrowserWindowMessageConnection
+  let connectionFromAeppToWallet: BrowserWindowMessageConnection
 
   before(async function () {
     node = await Node({ url, ignoreVersion })
     connections = getConnections()
     connectionFromWalletToAepp = BrowserWindowMessageConnection({
       connectionInfo: { id: 'from_wallet_to_aepp' },
-      self: connections.waelletConnection,
+      self: connections.walletConnection,
       target: connections.aeppConnection
     })
     connectionFromAeppToWallet = BrowserWindowMessageConnection({
       connectionInfo: { id: 'from_aepp_to_wallet' },
       self: connections.aeppConnection,
-      target: connections.waelletConnection
+      target: connections.walletConnection
     })
   })
 
   describe('New RPC Wallet-AEPP: AEPP node', () => {
     const keypair = generateKeyPair()
-    let aepp
-    let wallet
+    let aepp: RpcAepp
+    let wallet: RpcWallet
 
     before(async () => {
       await spendPromise
@@ -100,8 +128,8 @@ describe('Aepp<->Wallet', function () {
     })
 
     it('Should receive `announcePresence` message from wallet', async () => {
-      const isReceived = new Promise((resolve) => {
-        connections.aeppConnection.addEventListener('message', (msg) => {
+      const isReceived = new Promise((resolve: ResolveFunc) => {
+        connections.aeppConnection.addEventListener('message', (msg: any) => {
           resolve(msg.data.method === 'connection.announcePresence')
         })
       })
@@ -115,7 +143,7 @@ describe('Aepp<->Wallet', function () {
     })
 
     it('AEPP connect to wallet: wallet reject connection', async () => {
-      wallet.onConnection = (aepp, actions) => {
+      wallet.onConnection = (aepp: RpcAepp, actions: { deny: () => void }) => {
         actions.deny()
       }
       await expect(aepp.connectToWallet(connectionFromAeppToWallet)).to.be.eventually
@@ -124,7 +152,7 @@ describe('Aepp<->Wallet', function () {
     })
 
     it('AEPP connect to wallet: wallet accept connection', async () => {
-      wallet.onConnection = (aepp, actions) => {
+      wallet.onConnection = (aepp: RpcAepp, actions: { accept: () => void }) => {
         actions.accept()
       }
       connectionFromAeppToWallet.disconnect()
@@ -148,7 +176,7 @@ describe('Aepp<->Wallet', function () {
     })
 
     it('Subscribe to address: wallet reject', async () => {
-      wallet.onSubscription = (aepp, actions) => {
+      wallet.onSubscription = (aepp: RpcAepp, actions: { deny: () => void }) => {
         actions.deny()
       }
       await expect(aepp.subscribeAddress('subscribe', 'connected')).to.be.eventually
@@ -156,7 +184,8 @@ describe('Aepp<->Wallet', function () {
     })
 
     it('Subscribe to address: invalid accounts', async () => {
-      wallet.onSubscription = (aepp, actions) => {
+      wallet.onSubscription = (
+        aepp: RpcAepp, actions: any) => {
         actions.accept({ accounts: {} })
       }
       await expect(aepp.subscribeAddress('subscribe', 'connected'))
@@ -165,10 +194,10 @@ describe('Aepp<->Wallet', function () {
 
     it('Subscribe to address: wallet accept', async () => {
       const accounts = {
-        connected: { [keypair.publicKey]: {} },
-        current: wallet.addresses().reduce((acc, v) => ({ ...acc, [v]: {} }), {})
+        connected: { [keypair.publicKey.toString()]: {} },
+        current: wallet.addresses().reduce((acc: any, v: any) => ({ ...acc, [v]: {} }), {})
       }
-      wallet.onSubscription = (aepp, actions) => {
+      wallet.onSubscription = (aepp: RpcAepp, actions: any) => {
         actions.accept({ accounts })
       }
       await aepp.subscribeAddress('subscribe', 'connected')
@@ -176,7 +205,7 @@ describe('Aepp<->Wallet', function () {
       const subscriptionResponse = await aepp.subscribeAddress('subscribe', 'connected')
 
       subscriptionResponse.subscription.should.be.an('array')
-      subscriptionResponse.subscription.filter(e => e === 'connected').length.should.be.equal(1)
+      subscriptionResponse.subscription.filter((e: string) => e === 'connected').length.should.be.equal(1)
       subscriptionResponse.address.current.should.be.an('object')
       Object.keys(subscriptionResponse.address.current)[0].should.be.equal(account.publicKey)
       subscriptionResponse.address.connected.should.be.an('object')
@@ -186,7 +215,7 @@ describe('Aepp<->Wallet', function () {
     it('Try to use `onAccount` for not existent account', async () => {
       const { publicKey } = generateKeyPair()
       await expect(aepp.spend(100, publicKey, { onAccount: publicKey }))
-        .to.be.rejectedWith(UnAuthorizedAccountError, `You do not have access to account ${publicKey}`)
+        .to.be.rejectedWith(UnAuthorizedAccountError, `You do not have access to account ${publicKey.toString()}`)
     })
 
     it('aepp accepts key pairs in onAccount', async () => {
@@ -198,7 +227,7 @@ describe('Aepp<->Wallet', function () {
     })
 
     it('Ask for address: subscribed for accounts -> wallet deny', async () => {
-      wallet.onAskAccounts = (aepp, actions) => {
+      wallet.onAskAccounts = (aepp: RpcAepp, actions: { deny: () => void }) => {
         actions.deny()
       }
       await expect(aepp.askAddresses()).to.be.eventually
@@ -206,7 +235,7 @@ describe('Aepp<->Wallet', function () {
     })
 
     it('Ask for address: subscribed for accounts -> wallet accept', async () => {
-      wallet.onAskAccounts = (aepp, actions) => {
+      wallet.onAskAccounts = (aepp: RpcAepp, actions: { accept: () => void }) => {
         actions.accept()
       }
       const addressees = await aepp.askAddresses()
@@ -215,7 +244,7 @@ describe('Aepp<->Wallet', function () {
     })
 
     it('Not authorize', async () => {
-      const client = Object.entries(wallet.rpcClients)[0][1]
+      const client: RpcClient = Object.entries(wallet.rpcClients)[0][1]
       client.updateInfo({ status: RPC_STATUS.DISCONNECTED })
       await expect(aepp.askAddresses()).to.be.eventually
         .rejectedWith('You are not connected to the wallet')
@@ -224,7 +253,7 @@ describe('Aepp<->Wallet', function () {
     })
 
     it('Sign transaction: wallet deny', async () => {
-      wallet.onSign = (aepp, action) => {
+      wallet.onSign = (aepp: RpcAepp, action: { deny: () => void }) => {
         action.deny()
       }
       const address = await aepp.address()
@@ -239,7 +268,7 @@ describe('Aepp<->Wallet', function () {
     })
 
     it('Sign transaction: invalid account object in action', async () => {
-      wallet.onSign = (aepp, action) => {
+      wallet.onSign = (aepp: RpcAepp, action: any) => {
         action.accept(null, { onAccount: {} })
       }
       const tx = await aepp.spendTx({
@@ -253,7 +282,7 @@ describe('Aepp<->Wallet', function () {
     })
 
     it('Sign transaction: wallet allow', async () => {
-      wallet.onSign = (aepp, action) => {
+      wallet.onSign = (aepp: RpcAepp, action: { accept: () => void }) => {
         action.accept()
       }
       const address = await aepp.address()
@@ -279,13 +308,13 @@ describe('Aepp<->Wallet', function () {
           onAccount: pub,
           returnSigned: true
         }
-      )).to.be.eventually.rejectedWith(`You are not subscribed for account ${pub}`)
+      )).to.be.eventually.rejectedWith(`You are not subscribed for account ${pub.toString()}`)
         .with.property('code', 11)
     })
 
     it('Sign by wallet and broadcast transaction by aepp ', async () => {
       const address = await aepp.address()
-      wallet.onSign = (aepp, action) => {
+      wallet.onSign = (aepp: RpcAepp, action: { accept: (tx: any) => void }) => {
         action.accept(tx2)
       }
       const tx2 = await aepp.spendTx({
@@ -306,7 +335,7 @@ describe('Aepp<->Wallet', function () {
     })
 
     it('Sign message: rejected', async () => {
-      wallet.onMessageSign = (aepp, action) => {
+      wallet.onMessageSign = (aepp: RpcAepp, action: { deny: () => void }) => {
         action.deny()
       }
       await expect(aepp.signMessage('test')).to.be.eventually
@@ -314,7 +343,7 @@ describe('Aepp<->Wallet', function () {
     })
 
     it('Sign message', async () => {
-      wallet.onMessageSign = (aepp, action) => {
+      wallet.onMessageSign = (aepp: RpcAepp, action: { accept: () => void }) => {
         action.accept()
       }
       const messageSig = await aepp.signMessage('test')
@@ -324,7 +353,7 @@ describe('Aepp<->Wallet', function () {
     })
 
     it('Sign message using account not from sdk instance: do not provide account', async () => {
-      wallet.onMessageSign = (aepp, action) => {
+      wallet.onMessageSign = (aepp: RpcAepp, action: any) => {
         action.accept({})
       }
       const onAccount = aepp.addresses()[1]
@@ -334,7 +363,11 @@ describe('Aepp<->Wallet', function () {
     })
 
     it('Sign message using account not from sdk instance', async () => {
-      wallet.onMessageSign = (aepp, action) => {
+      wallet.onMessageSign = (
+        aepp: RpcAepp,
+        action: {
+          params: { onAccount: string | Buffer }
+          accept: ({ onAccount }: {onAccount: string | Buffer}) => void }) => {
         if (action.params.onAccount === keypair.publicKey) {
           action.accept({ onAccount: MemoryAccount({ keypair }) })
         }
@@ -347,7 +380,7 @@ describe('Aepp<->Wallet', function () {
     })
 
     it('Sign and broadcast invalid transaction', async () => {
-      wallet.onSign = (aepp, action) => {
+      wallet.onSign = (aepp: RpcAepp, action: { accept: () => void }) => {
         action.accept()
       }
       const address = await aepp.address()
@@ -366,9 +399,9 @@ describe('Aepp<->Wallet', function () {
     it('Add new account to wallet: receive notification for update accounts', async () => {
       const keypair = generateKeyPair()
       const connectedLength = Object.keys(aepp.rpcClient.accounts.connected).length
-      const received = await new Promise((resolve) => {
-        aepp.onAddressChange = (accounts) => {
-          resolve(Object.keys(accounts.connected).length === connectedLength + 1)
+      const received = await new Promise((resolve: ResolveFunc) => {
+        aepp.onAddressChange = (accounts: Accounts) => {
+          resolve(Object.keys(accounts.connected ?? {}).length === connectedLength + 1)
         }
         wallet.addAccount(MemoryAccount({ keypair }))
       })
@@ -377,10 +410,10 @@ describe('Aepp<->Wallet', function () {
 
     it('Receive update for wallet select account', async () => {
       const connectedAccount = Object.keys(aepp.rpcClient.accounts.connected)[0]
-      const received = await new Promise((resolve) => {
-        aepp.onAddressChange = ({ connected, current }) => {
+      const received = await new Promise((resolve: ResolveFunc) => {
+        aepp.onAddressChange = ({ connected, current }: Accounts) => {
           Object.hasOwnProperty.call(current, connectedAccount).should.be.equal(true)
-          resolve(Object.keys(connected)[0] !== connectedAccount)
+          resolve(Object.keys(connected ?? {})[0] !== connectedAccount)
         }
         wallet.selectAccount(connectedAccount)
       })
@@ -388,8 +421,8 @@ describe('Aepp<->Wallet', function () {
     })
 
     it('Aepp: receive notification for network update', async () => {
-      const received = await new Promise((resolve) => {
-        aepp.onNetworkChange = (msg) => {
+      const received = await new Promise((resolve: (param: boolean) => void) => {
+        aepp.onNetworkChange = (msg: any) => {
           msg.networkId.should.be.equal(networkId)
           resolve(wallet.selectedNode.name === 'second_node')
         }
@@ -419,13 +452,13 @@ describe('Aepp<->Wallet', function () {
 
     it('Process response ', () => {
       expect(() => aepp.rpcClient.processResponse({ id: 11, error: {} }))
-        .to.throw('Can\'t find callback for this messageId ' + 11)
+        .to.throw(`Can't find callback for this messageId ${11}`)
     })
 
     it('Disconnect from wallet', async () => {
-      const received = await new Promise((resolve) => {
+      const received = await new Promise((resolve: ResolveFunc) => {
         let received = false
-        wallet.onDisconnect = (msg, from) => {
+        wallet.onDisconnect = (msg: any, from: any) => {
           msg.reason.should.be.equal('bye')
           from.info.status.should.be.equal('DISCONNECTED')
           if (received) resolve(true)
@@ -443,18 +476,18 @@ describe('Aepp<->Wallet', function () {
     })
 
     it('Remove rpc client', async () => {
-      wallet.onConnection = (aepp, actions) => {
+      wallet.onConnection = (aepp: RpcAepp, actions: { accept: () => void }) => {
         actions.accept()
       }
       const id = wallet.addRpcClient(BrowserWindowMessageConnection({
         connectionInfo: { id: 'from_wallet_to_aepp_2' },
-        self: connections.waelletConnection,
+        self: connections.walletConnection,
         target: connections.aeppConnection
       }))
       await aepp.connectToWallet(BrowserWindowMessageConnection({
         connectionInfo: { id: 'from_aepp_to_wallet_2' },
         self: connections.aeppConnection,
-        target: connections.waelletConnection
+        target: connections.walletConnection
       }))
 
       wallet.removeRpcClient(id)
@@ -476,28 +509,32 @@ describe('Aepp<->Wallet', function () {
     })
 
     it('getBrowserAPI: not in browser', () => {
+      // @ts-expect-error
       global.window = {}
       expect(() => getBrowserAPI()).to.throw(NoBrowserFoundError, 'Browser is not detected')
     })
 
     it('getBrowserAPI: not in browser(force error)', () => {
+      // @ts-expect-error
       global.window = {}
       getBrowserAPI(true).should.be.an('object')
     })
 
     it('getBrowserAPI: chrome', () => {
+      // @ts-expect-error
       global.window = { location: { origin: '//test' }, chrome: { runtime: {}, chrome: true } }
       getBrowserAPI().chrome.should.be.equal(true)
     })
 
     it('getBrowserAPI: firefox', () => {
+      // @ts-expect-error
       global.window = { location: { origin: '//test' }, browser: { runtime: {}, firefox: true } }
       getBrowserAPI().firefox.should.be.equal(true)
     })
     it('Send message from content script', async () => {
       connectionFromWalletToAepp.sendDirection = 'to_aepp'
-      const ok = await new Promise((resolve) => {
-        connectionFromAeppToWallet.connect((msg) => {
+      const ok = await new Promise((resolve: ResolveFunc) => {
+        connectionFromAeppToWallet.connect((msg: any) => {
           msg.method.should.be.equal('hey')
           resolve(true)
         })
@@ -509,8 +546,8 @@ describe('Aepp<->Wallet', function () {
 
   describe('New RPC Wallet-AEPP: Bind wallet node to AEPP', () => {
     const keypair = generateKeyPair()
-    let aepp
-    let wallet
+    let aepp: RpcAepp
+    let wallet: RpcWallet
 
     before(async () => {
       wallet = await RpcWallet({
@@ -518,7 +555,8 @@ describe('Aepp<->Wallet', function () {
         accounts: [MemoryAccount({ keypair: account })],
         nodes: [{ name: 'local', instance: node }],
         name: 'Wallet',
-        onConnection (aepp, { accept }) {
+        onConnection (
+          aepp: RpcAepp, { accept }: {accept: ({ shareNode }: { shareNode: boolean }) => void}) {
           accept({ shareNode: true })
         },
         onSubscription () {},
@@ -546,10 +584,11 @@ describe('Aepp<->Wallet', function () {
 
     it('Subscribe to address: wallet accept', async () => {
       const accounts = {
-        connected: { [keypair.publicKey]: {} },
-        current: wallet.addresses().reduce((acc, v) => ({ ...acc, [v]: {} }), {})
+        connected: { [keypair.publicKey.toString()]: {} },
+        current: wallet.addresses().reduce((acc: any, v: any) => ({ ...acc, [v]: {} }), {})
       }
-      wallet.onSubscription = (aepp, actions) => {
+      wallet.onSubscription = (
+        aepp: RpcAepp, actions: { accept: ({ accounts }: { accounts: Accounts }) => void }) => {
         actions.accept({ accounts })
       }
       await aepp.subscribeAddress('subscribe', 'connected')
@@ -557,7 +596,7 @@ describe('Aepp<->Wallet', function () {
       const subscriptionResponse = await aepp.subscribeAddress('subscribe', 'connected')
 
       subscriptionResponse.subscription.should.be.an('array')
-      subscriptionResponse.subscription.filter(e => e === 'connected').length.should.be.equal(1)
+      subscriptionResponse.subscription.filter((e: string) => e === 'connected').length.should.be.equal(1)
       subscriptionResponse.address.current.should.be.an('object')
       Object.keys(subscriptionResponse.address.current)[0].should.be.equal(account.publicKey)
       subscriptionResponse.address.connected.should.be.an('object')
@@ -566,7 +605,7 @@ describe('Aepp<->Wallet', function () {
 
     it('Sign by wallet and broadcast transaction by aepp ', async () => {
       const address = await aepp.address()
-      wallet.onSign = (aepp, action) => {
+      wallet.onSign = (aepp: RpcAepp, action: { accept: (tx: any) => void }) => {
         action.accept(tx2)
       }
       const tx2 = await aepp.spendTx({
@@ -587,8 +626,8 @@ describe('Aepp<->Wallet', function () {
     })
 
     it('Aepp: receive notification with node for network update', async () => {
-      const received = await new Promise((resolve) => {
-        aepp.onNetworkChange = (msg) => {
+      const received = await new Promise((resolve: ResolveFunc) => {
+        aepp.onNetworkChange = (msg: any) => {
           msg.networkId.should.be.equal(networkId)
           msg.node.should.be.an('object')
           resolve(wallet.selectedNode.name === 'second_node')
@@ -600,10 +639,10 @@ describe('Aepp<->Wallet', function () {
   })
 })
 
-const WindowPostMessageFake = (name) => ({
+const WindowPostMessageFake = (name: string): Connection => ({
   name,
   messages: [],
-  addEventListener (onEvent, listener) {
+  addEventListener (_onEvent, listener) {
     this.listener = listener
   },
   removeEventListener () {
@@ -615,21 +654,26 @@ const WindowPostMessageFake = (name) => ({
   }
 })
 
-const getFakeConnections = (direct = false) => {
-  const waelletConnection = WindowPostMessageFake('wallet')
+const getFakeConnections = (
+  direct = false): Connections => {
+  const walletConnection = WindowPostMessageFake('wallet')
   const aeppConnection = WindowPostMessageFake('aepp')
   if (direct) {
-    const waelletP = waelletConnection.postMessage
+    const waelletP = walletConnection.postMessage
     const aeppP = aeppConnection.postMessage
-    waelletConnection.postMessage = aeppP.bind(aeppConnection)
-    aeppConnection.postMessage = waelletP.bind(waelletConnection)
+    walletConnection.postMessage = aeppP.bind(aeppConnection)
+    aeppConnection.postMessage = waelletP.bind(walletConnection)
   }
-  return { waelletConnection, aeppConnection }
+  return { walletConnection, aeppConnection }
 }
 
-const getConnections = (direct) => {
+const getConnections = (
+  direct?: boolean): Connections => {
+  // @ts-expect-error
   global.chrome = { runtime: {} }
+  // @ts-expect-error
   global.window = { location: { origin: '//test' }, chrome: global.chrome }
+  // @ts-expect-error
   global.location = { protocol: 'http://test.com' }
   return getFakeConnections(direct)
 }
