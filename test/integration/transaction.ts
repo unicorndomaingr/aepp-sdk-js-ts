@@ -18,6 +18,7 @@ import { EncodedData } from './../../src/utils/encoder'
 
 import { describe, it, before } from 'mocha'
 import { expect } from 'chai'
+// @ts-expect-error
 import { BaseAe, spendPromise, publicKey } from './index'
 import { commitmentHash, oracleQueryId, decode, encode } from '../../src/tx/builder/helpers'
 import { GAS_MAX, MIN_GAS_PRICE } from '../../src/tx/builder/schema'
@@ -55,10 +56,10 @@ const nameSalt = 4204563566073083
 const commitmentId = commitmentHash(name, nameSalt)
 
 describe('Transaction', function () {
-  let aeSdk
+  let aeSdk: any
   const address = publicKey
   const oracleId = encode(decode(address as EncodedData<'ak'>, 'ak'), 'ok')
-  let contract
+  let contract: any
 
   before(async () => {
     aeSdk = await BaseAe()

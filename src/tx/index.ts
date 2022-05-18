@@ -24,6 +24,7 @@
 
 import stampit from '@stamp/it'
 import { required } from '@stamp/required'
+import { EncodedData } from '../utils/encoder'
 import {
   TxContractCall,
   TxContractCreate,
@@ -36,6 +37,7 @@ import {
   TxOracleQuery,
   TxOracleRegister,
   TxOracleRespond,
+  TxPayingFor,
   TxSpend
 } from './builder/schema'
 

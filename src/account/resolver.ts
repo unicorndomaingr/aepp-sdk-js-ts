@@ -24,7 +24,7 @@ export class _AccountResolver extends _AccountBase {
   }
 
   async signTransaction (
-    tx: string,
+    tx: EncodedData<'tx'>,
     { onAccount, ...options }: { onAccount?: Account } & Parameters<_AccountBase['signTransaction']>[1] = {}
   ): Promise<string> {
     return await this._resolveAccount(onAccount)

@@ -840,7 +840,7 @@ export interface TxChannelCloseSolo extends TxBase {
   channelId: string
   fromId: string
   payload: string
-
+  fee: BigNumber
   poi: string
 }
 const CHANNEL_CLOSE_SOLO_TX = [
@@ -858,7 +858,7 @@ export interface TxChannelSlash extends TxBase {
   channelId: string
   fromId: string
   payload: string
-
+  fee: BigNumber
   poi: string
 }
 const CHANNEL_SLASH_TX = [
@@ -877,6 +877,7 @@ export interface TxChannelSettle extends TxBase {
   fromId: string
   initiatorAmountFinal: number
   responderAmountFinal: number
+  fee: BigNumber
 }
 const CHANNEL_SETTLE_TX = [
   ...BASE_TX,

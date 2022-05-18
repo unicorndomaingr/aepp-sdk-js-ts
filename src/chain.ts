@@ -23,12 +23,9 @@
  */
 
 import { AE_AMOUNT_FORMATS, AeAmountFormats, formatAmount } from './utils/amount-formatter'
-// @ts-expect-error
 import verifyTransaction from './tx/validator'
 import { pause } from './utils/other'
-// @ts-expect-error
 import { isNameValid, produceNameId, decode } from './tx/builder/helpers'
-// @ts-expect-error
 import { DRY_RUN_ACCOUNT } from './tx/builder/schema'
 import {
   AensPointerContextError, DryRunError, InvalidAensNameError, InvalidTxError,
@@ -442,7 +439,7 @@ export async function resolveName (
   { verify: boolean, resolveByNode: boolean, onNode: Node }
 ): Promise<EncodedData<'ak'> | EncodedData<'nm'>> {
   try {
-    decode(nameOrId)
+    decode(nameOrId as EncodedData<'ak'>)
     return nameOrId as EncodedData<'ak'>
   } catch (error) {}
   if (isNameValid(nameOrId)) {

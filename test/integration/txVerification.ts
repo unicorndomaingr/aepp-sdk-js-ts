@@ -1,5 +1,6 @@
 import { before, describe, it } from 'mocha'
 import { expect } from 'chai'
+// @ts-expect-error
 import { getSdk } from '.'
 import { generateKeyPair } from '../../src/utils/crypto'
 import MemoryAccount from '../../src/account/memory'
@@ -7,7 +8,8 @@ import verifyTransaction from '../../src/tx/validator'
 import { ArgumentError } from '../../src/utils/errors'
 
 describe('Verify Transaction', function () {
-  let aeSdk, node
+  let aeSdk: any
+  let node: any
 
   before(async () => {
     aeSdk = await getSdk()
@@ -16,7 +18,7 @@ describe('Verify Transaction', function () {
   })
 
   it('validates params in buildRawTx', async () => {
-    return expect(aeSdk.spendTx({})).to.be.rejectedWith(ArgumentError, 'value should be a number, got undefined instead')
+    return await expect(aeSdk.spendTx({})).to.be.rejectedWith(ArgumentError, 'value should be a number, got undefined instead')
     // TODO: should be /^Transaction build error./ instead
   })
 
@@ -59,7 +61,7 @@ describe('Verify Transaction', function () {
       ttl: 2,
       absoluteTtl: true
     })
-    const error = await aeSdk.send(spendTx).catch(e => e)
+    const error = await aeSdk.send(spendTx).catch((e: Error) => e)
     expect(error.validation).to.have.lengthOf(1)
   })
 

@@ -1,3 +1,4 @@
+import { AeAmountFormats } from './../../utils/amount-formatter'
 import { EncodedData, EncodingType } from './../../utils/encoder'
 import BigNumber from 'bignumber.js'
 import { decode as rlpDecode, encode as rlpEncode, NestedUint8Array } from 'rlp'
@@ -410,7 +411,7 @@ function validateField (
 }
 
 function transformParams (
-  params: any, schema: TxField[], { denomination }: {denomination?: string} = {}): any {
+  params: any, schema: TxField[], { denomination }: {denomination?: AeAmountFormats} = {}): any {
   params = schema
     .filter(([, t]) => t === FIELD_TYPES.amount)
     .reduce(
@@ -520,7 +521,9 @@ function buildFee (txType: TxType, { params, multiplier, vsn }:
  * @example calculateFee(null, 'spendTx', { gasLimit, params })
  */
 export function calculateFee (
-  fee: number | BigNumber = 0, txType: TxType, { gasLimit = 0, params, showWarning = true, vsn }: {
+  fee: number | BigNumber | string = 0,
+  txType: TxType,
+  { gasLimit = 0, params, showWarning = true, vsn }: {
     gasLimit?: number
     params?: any
     showWarning?: boolean
@@ -555,7 +558,7 @@ export function validateParams (
 
 interface TxOptionsRaw {
   excludeKeys?: string[]
-  denomination?: string
+  denomination?: AeAmountFormats
 }
 /**
  * Build binary transaction

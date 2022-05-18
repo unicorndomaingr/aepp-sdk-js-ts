@@ -87,7 +87,7 @@ export function formatSalt (salt: number): Buffer {
  * @param name Name to encode
  * @return `nm_` prefixed encoded AENS name
  */
-export function produceNameId (name: string): string {
+export function produceNameId (name: string): EncodedData<'nm'> {
   ensureNameValid(name)
   return encode(hash(name.toLowerCase()), 'nm')
 }

@@ -1,3 +1,4 @@
+import { TxSigned } from './../tx/builder/schema'
 /*
  * ISC License (ISC)
  * Copyright (c) 2018 aeternity developers
@@ -31,9 +32,7 @@ import {
   ChannelFsm,
   SignTx
 } from './internal'
-// @ts-expect-error
 import { unpackTx, buildTx } from '../tx/builder'
-// @ts-expect-error
 import { encode } from '../tx/builder/helpers'
 import { EncodedData } from '../utils/encoder'
 import {
@@ -47,10 +46,10 @@ import Channel from '.'
 async function appendSignature (
   tx: EncodedData<'tx'>, signFn: SignTx
 ): Promise<EncodedData<'tx'> | number | null> {
-  const { signatures, encodedTx } = unpackTx(tx).tx
+  const { signatures, encodedTx } = unpackTx<TxSigned>(tx).tx
   const result = await signFn(encode(encodedTx.rlpEncoded, 'tx'))
   if (typeof result === 'string') {
-    const { tx: signedTx, txType } = unpackTx(result)
+    const { tx: signedTx, txType } = unpackTx<TxSigned>(result)
     return buildTx({
       signatures: signatures.concat(signedTx.signatures),
       encodedTx: signedTx.encodedTx.rlpEncoded
@@ -623,7 +622,7 @@ export function awaitingNewContractCompletion (
 ): ChannelFsm {
   const channelOptions = options.get(channel)
   if (message.method === 'channels.update') {
-    const { round } = unpackTx(message.params.data.state).tx.encodedTx.tx
+    const { round } = unpackTx<any>(message.params.data.state).tx.encodedTx.tx
     if (channelOptions?.role != null) {
       const role = channelOptions.role === 'initiator'
         ? 'initiatorId'

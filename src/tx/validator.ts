@@ -201,7 +201,7 @@ const validators: validator[] = [
         checkedKeys: ['contractId']
       }]
     } catch (error) {
-      if (error.response?.parsedBody?.reason != null) throw error
+      if (error.response?.parsedBody?.reason == null) throw error
       return [{
         message: error.response.parsedBody.reason,
         key: 'ContractNotFound',

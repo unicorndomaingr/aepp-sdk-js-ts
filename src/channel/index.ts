@@ -24,9 +24,7 @@
 
 import BigNumber from 'bignumber.js'
 import { snakeToPascal } from '../utils/string'
-// @ts-expect-error TODO: remove me
 import { buildTx, unpackTx } from '../tx/builder'
-// @ts-expect-error TODO: remove me
 import { TX_TYPE } from '../tx/builder/schema'
 import * as handlers from './handlers'
 import {
@@ -230,7 +228,7 @@ export default class Channel {
     if (state == null) {
       return null
     }
-    const { txType, tx } = unpackTx(channelState.get(this)).tx.encodedTx
+    const { txType, tx } = unpackTx<any>(state).tx.encodedTx
     switch (txType) {
       case TX_TYPE.channelCreate:
         return 1
