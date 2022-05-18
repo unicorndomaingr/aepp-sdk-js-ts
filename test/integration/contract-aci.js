@@ -211,7 +211,7 @@ describe('Contract instance', function () {
   it('fails on trying to generate with not existing contract address', () =>
     expect(aeSdk.getContractInstance(
       { aci: identityContractSource, contractAddress: notExistingContractAddress }
-    )).to.be.rejectedWith(`v3/contracts/${notExistingContractAddress} error: Contract not found`))
+    )).to.be.rejectedWith(`v3/contracts/${notExistingContractAddress} error: "Contract not found"`))
 
   it('fails on trying to generate with invalid address', () =>
     expect(aeSdk.getContractInstance(
@@ -300,7 +300,7 @@ describe('Contract instance', function () {
   it('fails on paying to not payable function', async () => {
     const amount = 100
     await expect(testContract.methods.intFn.send(1, { amount }))
-      .to.be.rejectedWith(NotPayableFunctionError, `You try to pay "${amount}" to function "intFn" which is not payable. Only payable function can accept tokens`)
+      .to.be.rejectedWith(NotPayableFunctionError, `You try to pay "${amount}" to function "intFn" which is not payable. Only payable function can accept coins`)
   })
 
   it('pays to payable function', async () => {

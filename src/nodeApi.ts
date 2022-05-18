@@ -55,7 +55,7 @@ export default class extends (Node as unknown as TransformedNode) {
       additionalPolicies: [
         genRequestQueuesPolicy(),
         genCombineGetRequestsPolicy(),
-        genErrorFormatterPolicy((body: ErrorModel) => ` ${body.reason}`)
+        genErrorFormatterPolicy((body: ErrorModel) => ` ${JSON.stringify(body.reason)}`)
       ],
       ...options
     })
