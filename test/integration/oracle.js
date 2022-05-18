@@ -54,7 +54,7 @@ describe('Oracle', function () {
     query.decodedQuery.should.be.equal("{'city': 'Berlin'}")
   })
 
-  it('Pool for queries', (done) => {
+  it('Poll for queries', (done) => {
     let count = 0
     const stopPolling = oracle.pollQueries((queries) => {
       count += queries.length

@@ -1,6 +1,6 @@
 /*
  * ISC License (ISC)
- * Copyright (c) 2018 aeternity developers
+ * Copyright (c) 2022 aeternity developers
  *
  *  Permission to use, copy, modify, and/or distribute this software for any
  *  purpose with or without fee is hereby granted, provided that the above
@@ -17,15 +17,18 @@
 
 import { describe, it, before } from 'mocha'
 import { expect } from 'chai'
-import { getSdk } from './'
+// @ts-expect-error TODO remove
+import { getSdk } from '.'
 import { randomName } from '../utils'
 import { generateKeyPair } from '../../src/utils/crypto'
 import { buildContractId, computeAuctionEndBlock, computeBidFee } from '../../src/tx/builder/helpers'
 import { AensPointerContextError } from '../../src/utils/errors'
 import { pause } from '../../src/utils/other'
+import { Aepp } from '../../src/ae/aepp'
+import { EncodedData } from '../../src/utils/encoder'
 
 describe('Aens', function () {
-  let aeSdk
+  let aeSdk: Aepp
   const account = generateKeyPair()
   const name = randomName(13) // 13 name length doesn't trigger auction
 
@@ -39,15 +42,15 @@ describe('Aens', function () {
     preclaim.should.be.an('object')
     const claimed = await preclaim.claim()
     claimed.should.be.an('object')
-    claimed.id.should.be.a('string')
-    claimed.ttl.should.be.an('number')
+    expect(claimed.id).to.be.a('string')
+    expect(claimed.ttl).to.be.a('number')
   })
 
   it('queries names', async () => {
     // For some reason the node will return 404 when name is queried
     // just right after claim tx has been mined so we wait 0.5s
     await pause(500)
-    return aeSdk.aensQuery(name).should.eventually.be.an('object')
+    return await aeSdk.aensQuery(name).should.eventually.be.an('object')
   })
 
   it('throws error on querying non-existent name', () => aeSdk
@@ -55,7 +58,7 @@ describe('Aens', function () {
 
   it('Spend using name with invalid pointers', async () => {
     const current = await aeSdk.address()
-    const onAccount = aeSdk.addresses().find(acc => acc !== current)
+    const onAccount = aeSdk.addresses().find((acc: string) => acc !== current)
     const { pointers } = await aeSdk.getName(name)
     pointers.length.should.be.equal(0)
     await expect(aeSdk.spend(100, name, { onAccount }))
@@ -69,9 +72,10 @@ describe('Aens', function () {
     const contract = await aeSdk.getContractInstance({ source })
     await contract.deploy([])
     const nameObject = await aeSdk.aensQuery(name)
-    await nameObject.update({ contract_pubkey: contract.deployInfo.address })
+    await nameObject.update({ contract_pubkey: (contract.deployInfo.address) })
 
     const contractByName = await aeSdk.getContractInstance({ source, contractAddress: name })
+    // @ts-expect-error
     expect((await contractByName.methods.getArg(42)).decodedResult).to.be.equal(42n)
   })
 
@@ -79,9 +83,9 @@ describe('Aens', function () {
   const pointers = {
     myKey: address,
     account_pubkey: address,
-    oracle_pubkey: address.replace('ak', 'ok'),
-    channel: address.replace('ak', 'ch'),
-    contract_pubkey: buildContractId(address, 13)
+    oracle_pubkey: address.toString().replace('ak', 'ok'),
+    channel: address.toString().replace('ak', 'ch'),
+    contract_pubkey: buildContractId(address.toString(), 13)
   }
   const pointersNode = Object.entries(pointers).map(([key, id]) => ({ key, id }))
 
@@ -94,13 +98,14 @@ describe('Aens', function () {
     const preclaim = await aeSdk.aensPreclaim(randomName(13))
     await preclaim.claim()
     const current = await aeSdk.address()
-    const onAccount = aeSdk.addresses().find(acc => acc !== current)
-    return aeSdk.aensUpdate(name, onAccount, { onAccount, blocks: 1 }).should.eventually.be.rejected
+    const onAccount = aeSdk.addresses().find((acc: string) => acc !== current)
+    await aeSdk
+      .aensUpdate(name, onAccount, { onAccount, blocks: 1 }).should.eventually.be.rejected
   })
 
   it('updates extending pointers', async () => {
     const nameObject = await aeSdk.aensQuery(name)
-    const anotherContract = buildContractId(address, 12)
+    const anotherContract = buildContractId(address.toString(), 12)
     expect(await nameObject.update({ contract_pubkey: anotherContract }, { extendPointers: true }))
       .to.deep.include({
         pointers: [
@@ -113,9 +118,9 @@ describe('Aens', function () {
   it('throws error on setting 33 pointers', async () => {
     const nameObject = await aeSdk.aensQuery(name)
     const pointers = Object.fromEntries(
-      new Array(33).fill().map((v, i) => [`pointer-${i}`, address])
+      new Array(33).fill(undefined).map((v, i) => [`pointer-${i}`, address])
     )
-    expect(nameObject.update(pointers))
+    void expect(nameObject.update(pointers))
       .to.be.rejectedWith('Expected 32 pointers or less, got 33 instead')
   })
 
@@ -129,14 +134,14 @@ describe('Aens', function () {
 
   it('Spend by name', async () => {
     const current = await aeSdk.address()
-    const onAccount = aeSdk.addresses().find(acc => acc !== current)
+    const onAccount = aeSdk.addresses().find((acc: string) => acc !== current)
     await aeSdk.spend(100, name, { onAccount })
   })
 
   it('transfers names', async () => {
     const claim = await aeSdk.aensQuery(name)
     const current = await aeSdk.address()
-    const onAccount = aeSdk.addresses().find(acc => acc !== current)
+    const onAccount: EncodedData<'ak'> = aeSdk.addresses().find((acc: string) => acc !== current)
     await claim.transfer(onAccount)
 
     const claim2 = await aeSdk.aensQuery(name)
@@ -147,28 +152,28 @@ describe('Aens', function () {
 
   it('revoke names', async () => {
     const current = await aeSdk.address()
-    const onAccount = aeSdk.addresses().find(acc => acc !== current)
+    const onAccount = aeSdk.addresses().find((acc: string) => acc !== current)
     const aensName = await aeSdk.aensQuery(name)
 
+    // @ts-expect-error TODO remove
     const revoke = await aensName.revoke({ onAccount })
     revoke.should.be.an('object')
-
-    return aeSdk.aensQuery(name).should.be.rejectedWith(Error)
+    await aeSdk.aensQuery(name).should.be.rejectedWith(Error)
   })
 
   it('PreClaim name using specific account', async () => {
     const current = await aeSdk.address()
-    const onAccount = aeSdk.addresses().find(acc => acc !== current)
+    const onAccount = aeSdk.addresses().find((acc: string) => acc !== current)
 
     const preclaim = await aeSdk.aensPreclaim(name, { onAccount })
     preclaim.should.be.an('object')
-    preclaim.tx.accountId.should.be.equal(onAccount)
+    expect(preclaim.tx.accountId).to.be.equal(onAccount)
   })
 
   describe('name auctions', function () {
     it('claims names', async () => {
       const current = await aeSdk.address()
-      const onAccount = aeSdk.addresses().find(acc => acc !== current)
+      const onAccount = aeSdk.addresses().find((acc: string) => acc !== current)
       const name = randomName(12)
 
       const preclaim = await aeSdk.aensPreclaim(name)
@@ -177,7 +182,7 @@ describe('Aens', function () {
       const claim = await preclaim.claim()
       claim.should.be.an('object')
 
-      const bidFee = computeBidFee(name)
+      const bidFee = computeBidFee(name, null, undefined)
       const bid = await aeSdk.aensBid(name, bidFee, { onAccount })
       bid.should.be.an('object')
 

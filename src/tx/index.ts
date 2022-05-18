@@ -41,7 +41,7 @@ import {
   TxSpend
 } from './builder/schema'
 
-abstract class Tx {
+export abstract class Tx {
   /**
  * Create a `spend_tx` transaction
  * @param  options - The object to extract properties from

@@ -1,6 +1,6 @@
 /*
  * ISC License (ISC)
- * Copyright (c) 2018 aeternity developers
+ * Copyright (c) 2022 aeternity developers
  *
  *  Permission to use, copy, modify, and/or distribute this software for any
  *  purpose with or without fee is hereby granted, provided that the above
@@ -22,24 +22,25 @@
  * @example import { Universal } from '@aeternity/aepp-sdk'
  */
 
-import Ae from './'
+import Ae from '.'
 import Aens from './aens'
 import Transaction from '../tx/tx'
 import Oracle from './oracle'
+// @ts-expect-error
 import GeneralizedAccount from '../contract/ga'
 import AccountMultiple from '../account/multiple'
 import Contract from './contract'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import stampit from '@stamp/it'
 
 /**
  * Universal Stamp
  *
  * Universal provides Ae base functionality with Contract and Aens
  * {@link module:@aeternity/aepp-sdk/es/ae--Ae} clients.
- * @function
  * @alias module:@aeternity/aepp-sdk/es/ae/universal
- * @rtype Stamp
- * @param {Object} [options={}] - Initializer object
- * @return {Object} Universal instance
+ * @param options - Initializer object
+ * @return Universal instance
  */
 export default Ae.compose(
   Transaction, Aens, Contract, Oracle, GeneralizedAccount, AccountMultiple

@@ -1,6 +1,6 @@
 /*
  * ISC License (ISC)
- * Copyright (c) 2021 aeternity developers
+ * Copyright (c) 2022 aeternity developers
  *
  *  Permission to use, copy, modify, and/or distribute this software for any
  *  purpose with or without fee is hereby granted, provided that the above
@@ -22,12 +22,18 @@
  * @example import { RpcAepp } from '@aeternity/aepp-sdk'
  */
 
-import Ae from './'
-import Aens from './aens'
-import Contract from './contract'
+import AeStamp, { Ae } from '.'
+import Aens, { _Aens } from './aens'
+import Contract, { _Contract } from './contract'
+// @ts-expect-error
 import AeppRpc from '../utils/aepp-wallet-communication/rpc/aepp-rpc'
-import Tx from '../tx/tx'
-import Oracle from './oracle'
+import TxStamp from '../tx/tx'
+import { Tx } from '../tx'
+import Oracle, { _Oracle } from './oracle'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import stampit from '@stamp/it'
+
+export type Aepp = Tx & _Aens & _Contract & _Oracle & Ae
 
 /**
  * Aepp Stamp
@@ -35,10 +41,8 @@ import Oracle from './oracle'
  * Aepp provides base functionality.
  * Expected to use this stamp with a Wallet.
  * {@link module:@aeternity/aepp-sdk/es/ae--Ae} clients.
- * @function
  * @alias module:@aeternity/aepp-sdk/es/ae/aepp
- * @rtype Stamp
- * @param {Object} [options={}] - Initializer object
- * @return {Object} Aepp instance
+ * @param options - Initializer object
+ * @return Aepp instance
  */
-export default Ae.compose(Tx, Oracle, Contract, Aens, AeppRpc)
+export default AeStamp.compose(TxStamp, Oracle, Contract, Aens, AeppRpc)

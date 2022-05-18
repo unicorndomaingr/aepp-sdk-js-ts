@@ -22,7 +22,6 @@
  * @example import { Transaction } from '@aeternity/aepp-sdk'
  */
 
-// @ts-expect-error
 import Ae from '../ae'
 import { EncodedData } from './../utils/encoder'
 import Tx from '.'

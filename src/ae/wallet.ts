@@ -1,6 +1,6 @@
 /*
  * ISC License (ISC)
- * Copyright (c) 2018 aeternity developers
+ * Copyright (c) 2022 aeternity developers
  *
  *  Permission to use, copy, modify, and/or distribute this software for any
  *  purpose with or without fee is hereby granted, provided that the above
@@ -22,24 +22,26 @@
  * @example import { RpcWallet } from '@aeternity/aepp-sdk'
  */
 
-import Ae from './'
+import Ae from '.'
 import Tx from '../tx/tx'
 import Contract from './contract'
+// @ts-expect-error
 import GeneralizedAccount from '../contract/ga'
+// @ts-expect-error
 import WalletRpc from '../utils/aepp-wallet-communication/rpc/wallet-rpc'
 import Oracle from './oracle'
 import Aens from './aens'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import stampit from '@stamp/it'
 
 /**
  * Wallet Stamp
- * @function
  * @alias module:@aeternity/aepp-sdk/es/ae/wallet
- * @rtype Stamp
- * @param {Object} [options={}] - Initializer object
- * @param {String} options.url - Node instance to connect to
- * @param {Account[]} [options.accounts] - Accounts to initialize with
- * @param {String} [options.account] - Public key of account to preselect
- * @return {Object} Wallet instance
+ * @param options - Initializer object
+ * @param options.url - Node instance to connect to
+ * @param options.accounts - Accounts to initialize with
+ * @param options.account - Public key of account to preselect
+ * @return Wallet instance
  * @example Wallet({
   url: 'https://testnet.aeternity.io/',
   accounts: [MemoryAccount({keypair})],

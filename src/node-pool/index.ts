@@ -31,7 +31,7 @@ interface NodePool {
   readonly api: Node['api']
 }
 
-class _NodePool implements NodePool {
+export class _NodePool implements NodePool {
   readonly api: Node['api']
   pool: Map<string, Node>
   selectedNode?: Node
