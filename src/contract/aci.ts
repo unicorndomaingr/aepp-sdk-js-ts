@@ -174,7 +174,8 @@ export default async function getContractInstance ({
   validateBytecode?: boolean
 } = {}): Promise<ContractInstance> {
   if (_aci == null && source != null) {
-    _aci = await onAccount.compilerApi.generateACI({ code: source, options: { fileSystem } })
+    _aci = await onAccount.contractCompiler.compilerApi.generateACI(
+      { code: source, options: { fileSystem } })
   }
   if (_aci == null) throw new MissingContractDefError()
 
@@ -203,7 +204,7 @@ export default async function getContractInstance ({
       fileSystem,
       ...otherOptions
     },
-    compilerVersion: onAccount.compilerVersion,
+    compilerVersion: onAccount.contractCompiler.compilerVersion,
     compile: async function (_options?: {}): Promise<any> {},
     _estimateGas: async function (_name: string, _params: any[], _options: any): Promise<any> {},
     deploy: async function (_params: any[], _options: any): Promise<any> {},
@@ -217,7 +218,7 @@ export default async function getContractInstance ({
     if (contractAddress == null) throw new MissingContractAddressError('Can\'t validate bytecode without contract address')
     const onChanBytecode = (await onAccount.getContractByteCode(contractAddress)).bytecode
     const isValid: boolean = source != null
-      ? await onAccount.compilerApi.validateByteCode(
+      ? await onAccount.contractCompiler.compilerApi.validateByteCode(
         { bytecode: onChanBytecode, source, options: instance.options }
       ).then(() => true, () => false)
       : bytecode === onChanBytecode
@@ -232,9 +233,10 @@ export default async function getContractInstance ({
   instance.compile = async (options = {}): Promise<string> => {
     if (instance.bytecode != null) throw new IllegalArgumentError('Contract already compiled')
     if (instance.source == null) throw new IllegalArgumentError('Can\'t compile without source code')
-    const { bytecode }: { bytecode: string } = await onAccount.compilerApi.compileContract({
-      code: instance.source, options: { ...instance.options, ...options }
-    })
+    const { bytecode }: { bytecode: string } =
+      await onAccount.contractCompiler.compilerApi.compileContract({
+        code: instance.source, options: { ...instance.options, ...options }
+      })
     instance.bytecode = bytecode
     return instance.bytecode
   }
