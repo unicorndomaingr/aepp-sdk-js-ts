@@ -27,11 +27,6 @@
  */
 
 // @ts-expect-error TODO remove
-import Ae from '.'
-import ContractCompilerHttp from '../contract/compiler'
-// @ts-expect-error TODO remove
-import { AMOUNT } from '../tx/builder/schema'
-// @ts-expect-error TODO remove
 import { decode, produceNameId } from '../tx/builder/helpers'
 // @ts-expect-error TODO remove
 import { getNetworkId } from '../node'

@@ -18,14 +18,14 @@
 import '../'
 import { describe, it } from 'mocha'
 import { expect } from 'chai'
-import { decode as rlpDecode } from 'rlp'
+import { decoderlpDecode } from 'rlp'
 import type { Input } from 'rlp'
 import MPTree from '../../src/utils/mptree'
 import type { MPTreeBinary } from '../../src/utils/mptree'
 import { MerkleTreeHashMismatchError, MissingNodeInTreeError, UnknownNodeLengthError } from '../../src/utils/errors'
 
 const hexToTreeBinary = (hex: string): MPTreeBinary => {
-  return rlpDecode(Buffer.from(hex, 'hex') as Input) as MPTreeBinary
+  return decoderlpDecode(Buffer.from(hex, 'hex') as Input) as MPTreeBinary
 }
 
 describe('Merkle Patricia Tree', function () {

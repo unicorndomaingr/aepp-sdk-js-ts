@@ -25,9 +25,9 @@
 // @ts-expect-error TODO remove
 import { Encoder as Calldata } from '@aeternity/aepp-calldata'
 // @ts-expect-error TODO remove
-import { DRY_RUN_ACCOUNT, GAS_MAX, AMOUNT, TX_TYPE } from '../tx/builder/schema'
+import { DRY_RUN_ACCOUNT, GAS_MAX, TX_TYPE, AMOUNT } from '../tx/builder/schema'
 // @ts-expect-error TODO remove
-import { buildContractIdByContractTx, buildTx, unpackTx } from '../tx/builder'
+import { buildContractIdByContractTx, unpackTx } from '../tx/builder'
 import { decode, EncodedData, EncodingType } from '../utils/encoder'
 import {
   MissingContractDefError,
@@ -297,7 +297,7 @@ export default async function getContractInstance ({
     if (instance.deployInfo.address != null) throw new DuplicateContractError()
 
     const ownerId: string = await this.address(opt)
-    const { tx } = await buildTx(TX_TYPE.contractCreate, {
+    const tx = await onAccount.buildTx(TX_TYPE.contractCreate, {
       ...opt,
       gasLimit: opt.gasLimit ?? await instance._estimateGas('init', params, opt),
       callData: instance.calldata.encode(instance._name, 'init', params),
@@ -369,7 +369,7 @@ export default async function getContractInstance ({
           (opt.top != null &&
             parseInt((await onAccount.getAccount(callerId, { hash: opt.top })).nonce) + 1)
       }
-      const tx = await this.buildTx(...fn === 'init'
+      const tx = await onAccount.buildTx(...fn === 'init'
         ? [TX_TYPE.contractCreate, { ...txOpt, code: instance.bytecode, ownerId: callerId }]
         : [TX_TYPE.contractCall, { ...txOpt, callerId, contractId }])
 
@@ -377,7 +377,7 @@ export default async function getContractInstance ({
       await handleCallError(callObj, tx)
       res = { ...dryRunOther, tx: unpackTx(tx), result: callObj }
     } else {
-      const tx = await this.buildTx(TX_TYPE.contractCall, {
+      const tx = await onAccount.buildTx(TX_TYPE.contractCall, {
         ...opt,
         gasLimit: opt.gasLimit ?? await instance._estimateGas(fn, params, opt),
         callerId,
