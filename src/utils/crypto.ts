@@ -32,6 +32,11 @@ import { encode, decode, sha256hash, EncodedData, EncodingType } from './encoder
 
 export { sha256hash }
 
+interface KeyPair<Type extends Buffer | string> {
+  publicKey: Type extends string ? EncodedData<'ak'> : Buffer
+  secretKey: Type
+}
+
 const Ecb = aesjs.ModeOfOperation.ecb
 
 /**
@@ -126,27 +131,24 @@ export function generateKeyPairFromSecret (secret: Uint8Array): SignKeyPair {
  * @param {Boolean} raw - Whether to return raw (binary) keys
  * @return {Object} Key pair
  */
-export function generateKeyPair (raw = false): {
-  publicKey: string | Buffer
-  secretKey: string | Buffer
-} {
+export function generateKeyPair<B extends boolean = false> (raw: B = false as B):
+B extends false ? KeyPair<string> : KeyPair<Buffer> {
   // <node>/apps/aens/test/aens_test_utils.erl
   const keyPair = nacl.sign.keyPair()
 
   const publicBuffer = Buffer.from(keyPair.publicKey)
   const secretBuffer = Buffer.from(keyPair.secretKey)
 
-  if (raw) {
-    return {
-      publicKey: publicBuffer,
-      secretKey: secretBuffer
-    }
-  } else {
-    return {
-      publicKey: encode(publicBuffer, 'ak'),
-      secretKey: secretBuffer.toString('hex')
-    }
-  }
+  return (raw
+    ? {
+        publicKey: publicBuffer,
+        secretKey: secretBuffer
+      }
+    : {
+        publicKey: encode(publicBuffer, 'ak'),
+        secretKey: secretBuffer.toString('hex')
+      }
+  ) as B extends false ? KeyPair<string> : KeyPair<Buffer>
 }
 
 /**
