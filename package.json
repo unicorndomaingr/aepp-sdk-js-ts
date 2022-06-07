@@ -10,7 +10,7 @@
   },
   "sideEffects": false,
   "scripts": {
-    "build:es": "tsc && babel src --config-file ./babel.esm.config.js --out-dir es --extensions .js,.ts --out-file-extension .mjs --source-maps true",
+    "build:es": "node -e \"try{ if(require('react-scripts/package.json').version==='4.0.0') process.exit(1)}catch(e){} \" && tsc && babel src --config-file ./babel.esm.config.js --out-dir es --extensions .js,.ts --out-file-extension .mjs --source-maps true",
     "build:api": "npx autorest tooling/autorest/compiler.yaml --output-artifact:code-model-v4 && npx autorest tooling/autorest/node.yaml --output-artifact:code-model-v4",
     "build": "npm run build:api && webpack --mode=production && npm run build:es",
     "build:dev": "webpack --mode=development && npm run build:es",
