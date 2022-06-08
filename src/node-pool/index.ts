@@ -8,6 +8,7 @@ import stampit from '@stamp/it'
 // @ts-expect-error TODO remove
 import { getNetworkId } from '../node'
 import { DisconnectedError, DuplicateNodeError, NodeNotFoundError } from '../utils/errors'
+import { PROTOCOL_VM_ABI } from './../tx/builder/schema'
 
 // TODO: Update me when node module is migrated to TS
 type Node = any
@@ -16,7 +17,7 @@ interface NodeInfo {
   name: string
   version: string
   networkId: string
-  consensusProtocolVersion: string
+  consensusProtocolVersion: keyof typeof PROTOCOL_VM_ABI
 }
 
 interface NodePool {

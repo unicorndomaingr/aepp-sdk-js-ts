@@ -5,7 +5,7 @@ import { getSdk } from '.'
 import { generateKeyPair } from '../../src/utils/crypto'
 import MemoryAccount from '../../src/account/memory'
 import verifyTransaction from '../../src/tx/validator'
-import { ArgumentError } from '../../src/utils/errors'
+import { InvalidTxParamsError } from '../../src/utils/errors'
 // @ts-expect-error
 import { TX_TYPE } from '../../src'
 
@@ -20,8 +20,7 @@ describe('Verify Transaction', function () {
   })
 
   it('validates params in buildRawTx', async () => {
-    await expect(aeSdk.buildTx(TX_TYPE.spend, {})).to.be.rejectedWith(ArgumentError, 'value should be a number, got undefined instead')
-    // TODO: should be /^Transaction build error./ instead
+    await expect(aeSdk.buildTx(TX_TYPE.spend, {})).to.eventually.be.rejectedWith(InvalidTxParamsError, 'Transaction build error. {"senderId":"Field is required","recipientId":"Field is required"}')
   })
 
   it('returns errors', async () => {

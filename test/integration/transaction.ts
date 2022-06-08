@@ -166,7 +166,7 @@ describe('Transaction', function () {
   it('Get next account nonce', async () => {
     const { nonce: accountNonce } = await aeSdk.api.getAccountByPubkey(address)
     expect(await aeSdk.getAccountNonce(address)).to.be.equal(parseInt(accountNonce) + 1)
-    expect(await aeSdk.getAccountNonce(address, 1)).to.be.equal(1)
+    expect(await aeSdk.getAccountNonce(address, { nonce: 1 })).to.be.equal(1)
   })
 
   it('Destroy instance finishes without error', () => {

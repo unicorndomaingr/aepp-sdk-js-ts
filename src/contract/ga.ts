@@ -27,14 +27,7 @@ import { IllegalArgumentError, MissingParamError, InvalidAuthDataError } from '.
 import { concatBuffers } from '../utils/other'
 import { _AccountBase } from '../account/base'
 import { getContractInstance } from '../ae/contract'
-import NodeApi from '../nodeApi'
-import { getAccount } from '../chain'
-
-// Duplicate in Chain.ts
-interface Node {
-  api: InstanceType<typeof NodeApi>
-  nodeNetworkId: string
-}
+import { getAccount, Node } from '../chain'
 
 /**
  * Check if account is GA

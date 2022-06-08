@@ -23,7 +23,7 @@
  */
 
 import stampit from '@stamp/it'
-import Tx from '../tx'
+import * as txMethods from '../tx'
 import * as chainMethods from '../chain'
 import * as contractMethods from './contract'
 import * as contractGaMethods from '../contract/ga'
@@ -169,7 +169,7 @@ function destroyInstance () {
  * @param {Object} [options={}] - Initializer object
  * @return {Object} Ae instance
  */
-const Ae = stampit(NodePool, Tx, AccountResolver, ContractCompilerHttp, {
+const Ae = stampit(NodePool, AccountResolver, ContractCompilerHttp, {
   methods: {
     send,
     spend,
@@ -178,7 +178,7 @@ const Ae = stampit(NodePool, Tx, AccountResolver, ContractCompilerHttp, {
     destroyInstance,
     signUsingGA,
     ...mapObject(
-      { ...chainMethods, ...contractMethods, ...contractGaMethods },
+      { ...chainMethods, ...contractMethods, ...contractGaMethods, ...txMethods },
       ([name, handler]) => [
         name,
         function (...args) {

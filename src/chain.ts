@@ -37,6 +37,7 @@ import {
   Generation, KeyBlock, MicroBlockHeader, NameEntry, SignedTx
 } from './apis/node'
 import { EncodedData } from './utils/encoder'
+import { _NodePool } from './node-pool/index'
 
 export function _getPollInterval (
   type: 'block' | 'microblock',
@@ -51,10 +52,10 @@ export function _getPollInterval (
 
 // TODO: extract these definitions
 
-interface Node {
+export interface Node extends Pick<_NodePool, 'getNodeInfo'> {
   api: InstanceType<typeof NodeApi>
+  nodeNetworkId: string
 }
-
 interface Account {
   address: (options: any) => Promise<EncodedData<'ak'>>
 }

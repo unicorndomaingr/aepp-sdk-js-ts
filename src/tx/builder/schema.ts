@@ -12,6 +12,7 @@ import { EncodedData, EncodingType } from '../../utils/encoder'
 import { Pointer } from './helpers'
 import MPTree from '../../utils/mptree'
 import { Keypair } from '../../account/memory'
+import { VmVersion } from '..'
 
 export * from './constants'
 
@@ -268,7 +269,7 @@ interface BuildFieldTypes<Prefix extends EncodingType | readonly EncodingType[]>
   proofOfInclusion: any
   mptrees: MPTree[]
   callReturnType: any
-  ctVersion: number
+  ctVersion: VmVersion
   payload: string
 }
 
@@ -485,7 +486,7 @@ const NAME_REVOKE_TX = [
 const CONTRACT_TX = [
   ...BASE_TX,
   ['owner', FIELD_TYPES.id, 'ak'],
-  ['ctVersion', FIELD_TYPES.int],
+  ['ctVersion', FIELD_TYPES.ctVersion],
   ['code', FIELD_TYPES.binary, 'cb'],
   ['log', FIELD_TYPES.binary, 'cb'],
   ['active', FIELD_TYPES.bool],
@@ -758,7 +759,7 @@ const CHANNEL_SNAPSHOT_SOLO_TX = [
 const CHANNEL_OFFCHAIN_CREATE_CONTRACT_TX = [
   ...BASE_TX,
   ['owner', FIELD_TYPES.id, 'ak'],
-  ['ctVersion', FIELD_TYPES.int],
+  ['ctVersion', FIELD_TYPES.ctVersion],
   ['code', FIELD_TYPES.binary, 'cb'],
   ['deposit', FIELD_TYPES.int],
   ['callData', FIELD_TYPES.binary, 'cb']
