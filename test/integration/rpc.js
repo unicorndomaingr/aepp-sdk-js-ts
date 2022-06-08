@@ -92,10 +92,8 @@ describe('Aepp<->Wallet', function () {
     })
 
     it('Fail on not connected', async () => {
-      await Promise.all(
-        ['send', 'subscribeAddress', 'askAddresses', 'address']
-          .map(method => expect(aepp[method]()).to.be.rejectedWith(NoWalletConnectedError, 'You are not connected to Wallet'))
-      )
+      ['send', 'subscribeAddress', 'askAddresses', 'address']
+        .map(method => expect(aepp[method]()).to.be.rejectedWith(NoWalletConnectedError, 'You are not connected to Wallet'))
       expect(() => aepp.disconnectWallet()).to.throw(NoWalletConnectedError, 'You are not connected to Wallet')
     })
 
@@ -168,8 +166,13 @@ describe('Aepp<->Wallet', function () {
 
     it('Try to use `onAccount` for not existent account', async () => {
       const { publicKey } = generateKeyPair()
-      await expect(aepp.spend(100, publicKey, { onAccount: publicKey }))
-        .to.be.rejectedWith(UnAuthorizedAccountError, `You do not have access to account ${publicKey}`)
+
+      try {
+        await aepp.spend(100, publicKey, { onAccount: publicKey })
+      } catch (e) {
+        expect(e).to.be.instanceof(UnAuthorizedAccountError)
+        expect(e.message).to.be.a('string', `You do not have access to account ${publicKey}`)
+      }
     })
 
     it('aepp accepts key pairs in onAccount', async () => {

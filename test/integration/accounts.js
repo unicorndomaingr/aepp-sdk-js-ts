@@ -150,24 +150,27 @@ describe('Accounts', function () {
       const current = await aeSdk.address()
       const accounts = aeSdk.addresses()
       const onAccount = accounts.find(acc => acc !== current)
-
       const { tx } = await aeSdk.spend(1, await aeSdk.address(), { onAccount })
       tx.senderId.should.be.equal(onAccount)
       current.should.be.equal(current)
     })
 
     it('Fail on invalid account', async () => {
-      await expect(aeSdk.spend(1, await aeSdk.address(), { onAccount: 1 }))
-        .to.be.rejectedWith(
-          TypeError,
-          'Account should be an address (ak-prefixed string), keypair, or instance of AccountBase, got 1 instead')
+      try {
+        await aeSdk.spend(1, await aeSdk.address(), { onAccount: 1 })
+      } catch (e) {
+        expect(e).to.be.instanceOf(TypeError)
+        expect(e.message).to.be.a('string', 'Account should be an address (ak-prefixed string), keypair, or instance of AccountBase, got 1 instead')
+      }
     })
 
     it('Fail on non exist account', async () => {
-      await expect(aeSdk.spend(1, await aeSdk.address(), { onAccount: 'ak_q2HatMwDnwCBpdNtN9oXf5gpD9pGSgFxaa8i2Evcam6gjiggk' }))
-        .to.be.rejectedWith(
-          UnavailableAccountError,
-          'Account for ak_q2HatMwDnwCBpdNtN9oXf5gpD9pGSgFxaa8i2Evcam6gjiggk not available')
+      try {
+        await aeSdk.spend(1, await aeSdk.address(), { onAccount: 'ak_q2HatMwDnwCBpdNtN9oXf5gpD9pGSgFxaa8i2Evcam6gjiggk' })
+      } catch (e) {
+        expect(e).to.be.instanceOf(UnavailableAccountError)
+        expect(e.message).to.be.a('string', 'Account for ak_q2HatMwDnwCBpdNtN9oXf5gpD9pGSgFxaa8i2Evcam6gjiggk not available')
+      }
     })
 
     it('Fail on no accounts', async () => {

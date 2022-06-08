@@ -38,8 +38,7 @@ import {
 import {
   ArgumentError,
   UnsupportedProtocolError,
-  UnknownTxError,
-  UnexpectedTsError
+  UnknownTxError
 } from '../utils/errors'
 import { BigNumber } from 'bignumber.js'
 import { Node } from '../chain'
@@ -54,7 +53,7 @@ export interface VmVersion {
 export async function buildTx (
   txType: TxType,
   params: TxParamsCommon & Partial<VmVersion> & {
-    onNode?: Node
+    onNode: Node
   }): Promise<EncodedData<'tx'>> {
   let senderKey: keyof TxParamsCommon
   switch (txType) {
@@ -118,9 +117,9 @@ export async function buildTx (
 export function getVmVersion (
   txType: TxType,
   { vmVersion, abiVersion, onNode }: Partial<VmVersion> & {
-    onNode?: Node
-  } = {}): VmVersion {
-  if (onNode == null) throw new UnexpectedTsError('onNode')
+    onNode: Node
+  }
+): VmVersion {
   const { consensusProtocolVersion } = (onNode).getNodeInfo()
   const supportedProtocol = PROTOCOL_VM_ABI[consensusProtocolVersion]
   if (supportedProtocol == null) throw new UnsupportedProtocolError('Not supported consensus protocol version')
@@ -205,14 +204,13 @@ export async function prepareTxParams (
     absoluteTtl?: number
     strategy?: 'continuity' | 'max'
     showWarning?: boolean
-    onNode?: Node
+    onNode: Node
   }
 ): Promise<{
     fee: number | string | BigNumber
     ttl: number
     nonce: number | string | BigNumber
   }> {
-  if (onNode == null) throw new UnexpectedTsError('onNode')
   n = n ?? (
     await onNode.api.getAccountNextNonce(senderId, { strategy }).catch(() => ({ nextNonce: 1 }))
   ).nextNonce as number
