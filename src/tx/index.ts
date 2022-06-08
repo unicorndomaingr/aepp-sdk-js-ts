@@ -1,6 +1,6 @@
 /*
  * ISC License (ISC)
- * Copyright (c) 2018 aeternity developers
+ * Copyright (c) 2022 aeternity developers
  *
  *  Permission to use, copy, modify, and/or distribute this software for any
  *  purpose with or without fee is hereby granted, provided that the above
@@ -24,6 +24,36 @@
 
 import stampit from '@stamp/it'
 import { required } from '@stamp/required'
+import { buildTx } from './builder'
+import { TxType } from './builder/schema'
+import { getAccountNonce, prepareTxParams, VmVersion } from './tx'
+
+abstract class Tx {
+  /**
+   * Create a transaction
+   * @function buildTx
+   * @instance
+   * @abstract
+   * @category async
+   * @param options - The object with transaction properties
+   * @return generated transaction
+  */
+  abstract buildTx: typeof buildTx
+
+  abstract getVmVersion: (
+    txType: TxType,
+    { vmVersion, abiVersion }: Partial<VmVersion>) => VmVersion
+
+  abstract prepareTxParams: typeof prepareTxParams
+
+  /**
+   * Get Account Nonce
+   * @function getAccountNonce
+   * @param address - Account public key
+   * @return Result
+  */
+  abstract getAccountNonce: typeof getAccountNonce
+}
 
 /**
  * Basic Tx Stamp
@@ -34,41 +64,16 @@ import { required } from '@stamp/required'
  * Tx is one of the three basic building blocks of an
  * {@link module:@aeternity/aepp-sdk/es/ae--Ae} client and provides methods to
  * create aeternity transactions.
- * @function
  * @alias module:@aeternity/aepp-sdk/es/tx
- * @rtype Stamp
- * @param {Object} [options={}] - Initializer object
- * @return {Object} Tx instance
+ * @param options - Initializer object
+ * @return Tx instance
  * @example Tx()
  */
-const Tx = stampit(required({
+export default stampit<Tx>(required({
   methods: {
     buildTx: required,
     getAccountNonce: required,
     getVmVersion: required,
     prepareTxParams: required
   }
-}))
-
-/**
- * Create a transaction
- * @function buildTx
- * @instance
- * @abstract
- * @category async
- * @param {Object} options - The object with transaction properties
- * @return {String} generated transaction
- */
-
-/**
- * Get Account Nonce
- * @function getAccountNonce
- * @instance
- * @abstract
- * @category async
- * @rtype (address) => result: Number
- * @param {String} address - Account public key
- * @return {Number} Result
- */
-
-export default Tx
+}) as stampit.Composable)

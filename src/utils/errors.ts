@@ -14,6 +14,13 @@ export abstract class BaseError extends Error {
   }
 }
 
+export class UnexpectedTsError extends BaseError {
+  constructor (message: string = 'Expected to not happen, required for TS') {
+    super(message)
+    this.name = 'UnexpectedTsError'
+  }
+}
+
 export class AccountError extends BaseError {
   constructor (message: string) {
     super(message)
@@ -528,7 +535,7 @@ export class NoDefaultAensPointerError extends TransactionError {
 }
 
 export class PrefixNotFoundError extends TransactionError {
-  constructor (tag: string) {
+  constructor (tag: string | number) {
     super(`Prefix for id-tag ${tag} not found.`)
     this.name = 'PrefixNotFoundError'
   }

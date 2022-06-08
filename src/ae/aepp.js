@@ -27,6 +27,7 @@ import Aens from './aens'
 import AeppRpc from '../utils/aepp-wallet-communication/rpc/aepp-rpc'
 import Tx from '../tx/tx'
 import Oracle from './oracle'
+import asyncInit from '../utils/async-init'
 
 /**
  * Aepp Stamp
@@ -40,4 +41,4 @@ import Oracle from './oracle'
  * @param {Object} [options={}] - Initializer object
  * @return {Object} Aepp instance
  */
-export default Ae.compose(Tx, Oracle, Aens, AeppRpc)
+export default Ae.compose(asyncInit, Tx, Oracle, Aens, AeppRpc)

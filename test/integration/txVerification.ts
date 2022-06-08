@@ -1,14 +1,17 @@
 import { before, describe, it } from 'mocha'
 import { expect } from 'chai'
+// @ts-expect-error
 import { getSdk } from '.'
 import { generateKeyPair } from '../../src/utils/crypto'
 import MemoryAccount from '../../src/account/memory'
 import verifyTransaction from '../../src/tx/validator'
 import { ArgumentError } from '../../src/utils/errors'
+// @ts-expect-error
 import { TX_TYPE } from '../../src'
 
 describe('Verify Transaction', function () {
-  let aeSdk, node
+  let aeSdk: any
+  let node: any
 
   before(async () => {
     aeSdk = await getSdk()
@@ -60,7 +63,7 @@ describe('Verify Transaction', function () {
       ttl: 2,
       absoluteTtl: true
     })
-    const error = await aeSdk.send(spendTx).catch(e => e)
+    const error = await aeSdk.send(spendTx).catch((e: Error) => e)
     expect(error.validation).to.have.lengthOf(1)
   })
 

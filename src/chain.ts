@@ -23,12 +23,9 @@
  */
 
 import { AE_AMOUNT_FORMATS, AeAmountFormats, formatAmount } from './utils/amount-formatter'
-// @ts-expect-error
 import verifyTransaction from './tx/validator'
 import { pause } from './utils/other'
-// @ts-expect-error
 import { isNameValid, produceNameId, decode } from './tx/builder/helpers'
-// @ts-expect-error
 import { DRY_RUN_ACCOUNT } from './tx/builder/schema'
 import {
   AensPointerContextError, DryRunError, InvalidAensNameError, InvalidTxError,
@@ -62,7 +59,7 @@ interface Account {
   address: (options: any) => Promise<EncodedData<'ak'>>
 }
 
-type AensName = `${string}.chain`
+export type AensName = `${string}.chain`
 
 /**
  * Submit a signed transaction for mining
@@ -340,7 +337,7 @@ async function txDryRunHandler (key: string, onNode: Node): Promise<void> {
       txEvents: rs[0].txEvents,
       txs: rs.map(req => ({ tx: req.tx })),
       accounts: Array.from(new Set(rs.map(req => req.accountAddress)))
-        .map(pubKey => ({ pubKey, amount: DRY_RUN_ACCOUNT.amount }))
+        .map(pubKey => ({ pubKey, amount: BigInt(DRY_RUN_ACCOUNT.amount) }))
     })
   } catch (error) {
     rs.forEach(({ reject }) => reject(error))
@@ -442,17 +439,17 @@ export async function resolveName (
   { verify: boolean, resolveByNode: boolean, onNode: Node }
 ): Promise<EncodedData<'ak' | 'nm'>> {
   try {
-    decode(nameOrId)
+    decode(nameOrId as EncodedData<'ak'>)
     return nameOrId as EncodedData<'ak'>
   } catch (error) {}
-  if (isNameValid(nameOrId) === true) {
+  if (isNameValid(nameOrId)) {
     if (verify || resolveByNode) {
       const name = await onNode.api.getNameEntryByName(nameOrId)
       const pointer = name.pointers.find(pointer => pointer.key === key)
       if (pointer == null) throw new AensPointerContextError(nameOrId, key)
       if (resolveByNode) return pointer.id as EncodedData<'ak'>
     }
-    return produceNameId(nameOrId)
+    return produceNameId(nameOrId as AensName)
   }
   throw new InvalidAensNameError(`Invalid name or address: ${nameOrId}`)
 }
