@@ -15,8 +15,8 @@ export abstract class BaseError extends Error {
 }
 
 export class UnexpectedTsError extends BaseError {
-  constructor (message: string = 'Expected to not happen, required for TS') {
-    super(message)
+  constructor (variable: string = '') {
+    super(`Expected to not happen, ${variable} required for TS`)
     this.name = 'UnexpectedTsError'
   }
 }

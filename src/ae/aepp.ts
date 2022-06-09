@@ -1,6 +1,6 @@
 /*
  * ISC License (ISC)
- * Copyright (c) 2021 aeternity developers
+ * Copyright (c) 2022 aeternity developers
  *
  *  Permission to use, copy, modify, and/or distribute this software for any
  *  purpose with or without fee is hereby granted, provided that the above
@@ -23,10 +23,8 @@
  */
 
 import Ae from './'
-import Aens from './aens'
 import AeppRpc from '../utils/aepp-wallet-communication/rpc/aepp-rpc'
-import Oracle from './oracle'
-import asyncInit from '../utils/async-init'
+import stampit from '@stamp/it'
 
 /**
  * Aepp Stamp
@@ -34,10 +32,8 @@ import asyncInit from '../utils/async-init'
  * Aepp provides base functionality.
  * Expected to use this stamp with a Wallet.
  * {@link module:@aeternity/aepp-sdk/es/ae--Ae} clients.
- * @function
  * @alias module:@aeternity/aepp-sdk/es/ae/aepp
- * @rtype Stamp
- * @param {Object} [options={}] - Initializer object
- * @return {Object} Aepp instance
+ * @param options - Initializer object
+ * @return Aepp instance
  */
-export default Ae.compose(asyncInit, Oracle, Aens, AeppRpc)
+export default stampit.compose(Ae, AeppRpc)

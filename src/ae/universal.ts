@@ -1,6 +1,6 @@
 /*
  * ISC License (ISC)
- * Copyright (c) 2018 aeternity developers
+ * Copyright (c) 2022 aeternity developers
  *
  *  Permission to use, copy, modify, and/or distribute this software for any
  *  purpose with or without fee is hereby granted, provided that the above
@@ -22,20 +22,17 @@
  * @example import { Universal } from '@aeternity/aepp-sdk'
  */
 
-import Ae from './'
-import Aens from './aens'
-import Oracle from './oracle'
 import AccountMultiple from '../account/multiple'
+import stampit from '@stamp/it'
+import Ae from '.'
 
 /**
  * Universal Stamp
  *
  * Universal provides Ae base functionality with Contract and Aens
  * {@link module:@aeternity/aepp-sdk/es/ae--Ae} clients.
- * @function
  * @alias module:@aeternity/aepp-sdk/es/ae/universal
- * @rtype Stamp
- * @param {Object} [options={}] - Initializer object
- * @return {Object} Universal instance
+ * @param options - Initializer object
+ * @return Universal instance
  */
-export default Ae.compose(Aens, Oracle, AccountMultiple)
+export default stampit.compose(Ae, AccountMultiple)

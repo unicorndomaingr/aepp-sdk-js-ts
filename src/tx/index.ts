@@ -38,8 +38,7 @@ import {
 import {
   ArgumentError,
   UnsupportedProtocolError,
-  UnknownTxError,
-  UnexpectedTsError
+  UnknownTxError
 } from '../utils/errors'
 import { BigNumber } from 'bignumber.js'
 import { Node } from '../chain'
@@ -121,7 +120,6 @@ export function getVmVersion (
     onNode: Node
   }
 ): VmVersion {
-  if (onNode == null) throw new UnexpectedTsError('onNode')
   const { consensusProtocolVersion } = (onNode).getNodeInfo()
   const supportedProtocol = PROTOCOL_VM_ABI[
     +consensusProtocolVersion as keyof typeof PROTOCOL_VM_ABI
@@ -215,7 +213,6 @@ export async function prepareTxParams (
     ttl: number
     nonce: number | string | BigNumber
   }> {
-  if (onNode == null) throw new UnexpectedTsError('onNode')
   n = n ?? (
     await onNode.api.getAccountNextNonce(senderId, { strategy }).catch(() => ({ nextNonce: 1 }))
   ).nextNonce as number

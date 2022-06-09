@@ -18,7 +18,7 @@
     "docs:api": "node apidoc.js",
     "lint": "eslint . --ext .ts,.js",
     "test": "nyc mocha './test/unit/' './test/integration/'",
-    "test:integration": "nyc mocha './test/integration/'",
+    "test:integration": "nyc mocha './test/integration/oracle'",
     "test:unit": "nyc mocha './test/unit/'",
     "test:watch": "mocha './test/unit/' './test/integration/' --watch",
     "prepare": "npm run build",

@@ -38,10 +38,16 @@ import {
 } from './apis/node'
 import { EncodedData } from './utils/encoder'
 import { _NodePool } from './node-pool/index'
+import { _AccountBase } from './account/base'
 
 export function _getPollInterval (
   type: 'block' | 'microblock',
-  { _expectedMineRate = 180000, _microBlockCycle = 3000, _maxPollInterval = 5000 }
+  { _expectedMineRate = 180000, _microBlockCycle = 3000, _maxPollInterval = 5000 }:
+  {
+    _expectedMineRate?: number
+    _microBlockCycle?: number
+    _maxPollInterval?: number
+  } = {}
 ): number {
   const base = {
     block: _expectedMineRate,
@@ -56,7 +62,7 @@ export interface Node extends Pick<_NodePool, 'getNodeInfo'> {
   api: InstanceType<typeof NodeApi>
   nodeNetworkId: string
 }
-interface Account {
+export interface Account extends _AccountBase {
   address: (options: any) => Promise<EncodedData<'ak'>>
 }
 
@@ -186,7 +192,7 @@ export async function getAccount (
 export async function getBalance (
   address: EncodedData<'ak'>,
   { format = AE_AMOUNT_FORMATS.AETTOS, ...options }:
-  { format: AeAmountFormats } & Parameters<typeof getAccount>[1]
+  { format?: AeAmountFormats } & Parameters<typeof getAccount>[1]
 ): Promise<string> {
   const { balance } = await getAccount(address, options).catch(() => ({ balance: 0n }))
 
@@ -213,7 +219,7 @@ export async function height ({ onNode }: { onNode: Node }): Promise<number> {
 export async function awaitHeight (
   height: number,
   { interval, attempts = 20, onNode, ...options }:
-  { interval: number, attempts: number, onNode: Node }
+  { interval?: number, attempts?: number, onNode: Node }
   & Parameters<typeof _getPollInterval>[1]
 ): Promise<number> {
   interval ??= _getPollInterval('block', options)
@@ -238,7 +244,7 @@ export async function awaitHeight (
 export async function poll (
   th: EncodedData<'th'>,
   { blocks = 10, interval, onNode, ...options }:
-  { blocks: number, interval: number, onNode: Node } & Parameters<typeof _getPollInterval>[1]
+  { blocks?: number, interval?: number, onNode: Node } & Parameters<typeof _getPollInterval>[1]
 ): Promise<TransformNodeType<SignedTx>> {
   interval ??= _getPollInterval('microblock', options)
   const max = await height({ onNode }) + blocks
@@ -437,7 +443,7 @@ export async function resolveName (
   nameOrId: AensName | EncodedData<'ak'>,
   key: string,
   { verify = true, resolveByNode, onNode }:
-  { verify: boolean, resolveByNode: boolean, onNode: Node }
+  { verify?: boolean, resolveByNode: boolean, onNode: Node }
 ): Promise<EncodedData<'ak' | 'nm'>> {
   try {
     decode(nameOrId as EncodedData<'ak'>)

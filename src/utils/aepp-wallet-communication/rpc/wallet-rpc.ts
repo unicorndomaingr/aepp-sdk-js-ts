@@ -7,7 +7,6 @@
  * import WalletRpc from '@aeternity/aepp-sdk/es/utils/aepp-wallet-communication/rpc/wallet-rpc'
  */
 import { v4 as uuid } from '@aeternity/uuid'
-// @ts-expect-error TODO remove
 import Ae from '../../../ae'
 import verifyTransaction from '../../../tx/validator'
 import AccountMultiple, { _AccountMultiple } from '../../../account/multiple'
@@ -24,6 +23,7 @@ import NodePool, { _NodePool } from '../../../node-pool'
 import BrowserConnection from '../connection/Browser'
 import { Accounts, AeppApi, WalletApi, WalletInfo } from './types'
 import { EncodedData } from '../../encoder'
+import stampit from '@stamp/it'
 
 type RpcClientWallet = RpcClient<AeppApi, WalletApi>
 
@@ -328,7 +328,7 @@ abstract class _WalletRpc extends _AccountMultiple {
   }
 }
 
-export default Ae.compose(AccountMultiple, NodePool, {
+export default stampit.compose(Ae, AccountMultiple, NodePool, {
   init: _WalletRpc.prototype.init,
   props: { _clients: new Map() },
   methods: {

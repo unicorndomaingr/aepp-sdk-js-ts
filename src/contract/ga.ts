@@ -106,7 +106,7 @@ export async function createMetaTx (
     source?: string
     args?: any[]
   },
-  authFnName: string,
+  authFnName: string | undefined,
   { onAccount, ...options }: { onAccount: any } & Parameters<_AccountBase['address']>[0]
 ): Promise<EncodedData<'tx'>> {
   const wrapInEmptySignedTx = (
