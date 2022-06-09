@@ -14,6 +14,20 @@ export abstract class BaseError extends Error {
   }
 }
 
+export class UnexpectedTsError extends BaseError {
+  constructor (message: string = 'Expected to not happen, required for TS') {
+    super(message)
+    this.name = 'UnexpectedTsError'
+  }
+}
+
+export class ObjectKeyError extends BaseError {
+  constructor (key: string, objectName: string) {
+    super(`${objectName} has no key ${key}`)
+    this.name = 'ObjectKeyError'
+  }
+}
+
 export class AccountError extends BaseError {
   constructor (message: string) {
     super(message)

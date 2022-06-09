@@ -37,6 +37,7 @@ import {
   Generation, KeyBlock, MicroBlockHeader, NameEntry, SignedTx
 } from './apis/node'
 import { EncodedData } from './utils/encoder'
+import { _NodePool } from './node-pool/index'
 
 export function _getPollInterval (
   type: 'block' | 'microblock',
@@ -333,7 +334,7 @@ async function txDryRunHandler (key: string, onNode: Node): Promise<void> {
       txEvents: rs[0].txEvents,
       txs: rs.map(req => ({ tx: req.tx })),
       accounts: Array.from(new Set(rs.map(req => req.accountAddress)))
-        .map(pubKey => ({ pubKey, amount: DRY_RUN_ACCOUNT.amount }))
+        .map(pubKey => ({ pubKey, amount: BigInt(DRY_RUN_ACCOUNT.amount) }))
     })
   } catch (error) {
     rs.forEach(({ reject }) => reject(error))

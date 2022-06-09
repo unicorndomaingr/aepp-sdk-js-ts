@@ -54,7 +54,6 @@ function snakeToPascalObjKeys<Type> (obj: object): Type {
 }
 
 type EventCallback = (...args: any[]) => void
-
 interface CallContractOptions {
   amount?: number | BigNumber
   callData?: string

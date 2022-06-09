@@ -42,7 +42,7 @@ import {
   UnexpectedTsError
 } from '../utils/errors'
 import { BigNumber } from 'bignumber.js'
-import Node from '../node'
+import { Node } from '../chain'
 import { EncodedData } from '../utils/encoder'
 import { buildTx as syncBuildTx, calculateFee, unpackTx } from './builder/index'
 

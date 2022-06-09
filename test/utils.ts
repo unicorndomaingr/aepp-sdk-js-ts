@@ -1,5 +1,4 @@
 import { AensName } from './../src/chain'
-
 function randomString (len: number): string {
   const charSet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
   let randomString = ''
