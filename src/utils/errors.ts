@@ -14,6 +14,20 @@ export abstract class BaseError extends Error {
   }
 }
 
+export class UnexpectedTsError extends BaseError {
+  constructor (message: string = 'Expected to not happen, required for TS') {
+    super(message)
+    this.name = 'UnexpectedTsError'
+  }
+}
+
+export class ObjectKeyError extends BaseError {
+  constructor (key: string, objectName: string) {
+    super(`${objectName} has no key ${key}`)
+    this.name = 'ObjectKeyError'
+  }
+}
+
 export class AccountError extends BaseError {
   constructor (message: string) {
     super(message)
@@ -520,15 +534,8 @@ export class InvalidTxParamsError extends TransactionError {
   }
 }
 
-export class NoDefaultAensPointerError extends TransactionError {
-  constructor (prefix: string) {
-    super(`Default AENS pointer key is not defined for ${prefix} prefix`)
-    this.name = 'NoDefaultAensPointerError'
-  }
-}
-
 export class PrefixNotFoundError extends TransactionError {
-  constructor (tag: string) {
+  constructor (tag: string | number) {
     super(`Prefix for id-tag ${tag} not found.`)
     this.name = 'PrefixNotFoundError'
   }

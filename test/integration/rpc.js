@@ -25,12 +25,12 @@ import {
   RpcRejectedByUserError,
   RpcWallet,
   TX_TYPE,
-  WALLET_TYPE
-} from '../../src'
+  WALLET_TYPE,
+  BrowserWindowMessageConnection
+} from '../../src/index'
 import { concatBuffers } from '../../src/utils/other'
 import { unpackTx } from '../../src/tx/builder'
 import { decode } from '../../src/tx/builder/helpers'
-import BrowserWindowMessageConnection from '../../src/utils/aepp-wallet-communication/connection/BrowserWindowMessage'
 import { METHODS, RPC_STATUS } from '../../src/utils/aepp-wallet-communication/schema'
 import { generateKeyPair, verify, hash } from '../../src/utils/crypto'
 import { compilerUrl, account, networkId, url, ignoreVersion, spendPromise } from './'
