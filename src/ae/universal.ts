@@ -22,11 +22,10 @@
  * @example import { Universal } from '@aeternity/aepp-sdk'
  */
 
-import Ae from './'
-import Aens from './aens'
-import Oracle from './oracle'
+import Ae from '.'
 import AccountMultiple from '../account/multiple'
-import ContractCompilerHttp from '../contract/compiler'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import stampit from '@stamp/it'
 
 /**
  * Universal Stamp
@@ -39,4 +38,4 @@ import ContractCompilerHttp from '../contract/compiler'
  * @param {Object} [options={}] - Initializer object
  * @return {Object} Universal instance
  */
-export default Ae.compose(Aens, Oracle, AccountMultiple, ContractCompilerHttp)
+export default Ae.compose(AccountMultiple)

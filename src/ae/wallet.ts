@@ -22,11 +22,11 @@
  * @example import { RpcWallet } from '@aeternity/aepp-sdk'
  */
 
-import Ae from './'
-import ContractCompilerHttp from '../contract/compiler'
+import Ae from '.'
 import WalletRpc from '../utils/aepp-wallet-communication/rpc/wallet-rpc'
-import Oracle from './oracle'
-import Aens from './aens'
+import ContractCompilerHttp from '../contract/compiler'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import stampit from '@stamp/it'
 
 /**
  * Wallet Stamp
@@ -44,4 +44,4 @@ import Aens from './aens'
   address: keypair.publicKey,
 })
  */
-export default Ae.compose(Oracle, Aens, WalletRpc, ContractCompilerHttp)
+export default Ae.compose(WalletRpc, ContractCompilerHttp)

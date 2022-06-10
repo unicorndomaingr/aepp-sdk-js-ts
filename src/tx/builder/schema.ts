@@ -1017,7 +1017,7 @@ export type TxTypeSchemas = {
   >
 }
 
-interface TtlObject{
+export interface TtlObject{
   type: string
   value: number
 }

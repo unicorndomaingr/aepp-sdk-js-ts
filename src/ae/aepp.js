@@ -23,11 +23,9 @@
  */
 
 import Ae from './'
-import Aens from './aens'
-import ContractCompilerHttp from '../contract/compiler'
 import AeppRpc from '../utils/aepp-wallet-communication/rpc/aepp-rpc'
-import Oracle from './oracle'
 import asyncInit from '../utils/async-init'
+import stampit from '@stamp/it'
 
 /**
  * Aepp Stamp
@@ -41,4 +39,4 @@ import asyncInit from '../utils/async-init'
  * @param {Object} [options={}] - Initializer object
  * @return {Object} Aepp instance
  */
-export default Ae.compose(asyncInit, Oracle, ContractCompilerHttp, Aens, AeppRpc)
+export default stampit.compose(Ae, asyncInit, AeppRpc)

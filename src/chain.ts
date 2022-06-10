@@ -37,7 +37,8 @@ import {
   Generation, KeyBlock, MicroBlockHeader, NameEntry, SignedTx
 } from './apis/node'
 import { EncodedData } from './utils/encoder'
-import { _NodePool } from './node-pool/index'
+import { send } from './ae'
+import * as txMethods from './tx'
 
 export function _getPollInterval (
   type: 'block' | 'microblock',
@@ -52,9 +53,15 @@ export function _getPollInterval (
 
 // TODO: extract these definitions
 
-interface Account {
+export interface Account {
   address: (options: any) => Promise<EncodedData<'ak'>>
+  send: typeof send
+  _getPollInterval: typeof _getPollInterval
+  Ae: any
+  buildTx: typeof txMethods._buildTx
 }
+
+export type SentTx = any
 
 export type AensName = `${string}.chain`
 

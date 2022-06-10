@@ -96,7 +96,7 @@ const validators: Validator[] = [
       checkedKeys: ['fee']
     }]
   },
-  ({ ttl }: {ttl: number}, { height }: {height: number}): ValidatorResult[] => {
+  ({ ttl }, { height }) => {
     if (ttl === undefined) return []
     ttl = +ttl
     if (ttl === 0 || ttl >= height) return []
@@ -163,14 +163,9 @@ const validators: Validator[] = [
     }
     return []
   },
-  async ({ contractId }: {
-    contractId: EncodedData<'ct'>
-  }, { txType, node }: {
-    txType: TxType
-    node: Node
-  }) => {
+  async ({ contractId }, { txType, node }) => {
     if (TX_TYPE.contractCall !== txType) return []
-    contractId = contractId
+    contractId = contractId as EncodedData<'ct'>
     try {
       const { active } = await node.getContract(contractId)
       if (active) return []
